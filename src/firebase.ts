@@ -1,16 +1,16 @@
-import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAV-UTPMV54lzfQI4yoxfwLAH8E8mhegNY",
-  authDomain: "steel-vanguard-2.firebaseapp.com",
-  databaseURL: "https://steel-vanguard-2-default-rtdb.firebaseio.com",
-  projectId: "steel-vanguard-2",
-  storageBucket: "steel-vanguard-2.firebasestorage.app",
-  messagingSenderId: "490612450178",
-  appId: "1:490612450178:web:06d11274dd790c845a259b",
-  measurementId: "G-YQL5M6611Y"
-};
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import firebaseConfig from './firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const auth = getAuth();
+
+export const loginAnonymously = async () => {
+  try {
+    await signInAnonymously(auth);
+  } catch (error) {
+    console.error("Error signing in anonymously:", error);
+  }
+};

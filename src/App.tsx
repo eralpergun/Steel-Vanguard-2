@@ -10,7 +10,7 @@ export default function App() {
     const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('login');
     const [username, setUsername] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty'>('medium');
+    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
 
@@ -128,7 +128,35 @@ export default function App() {
             'cappucino': 'Cappucino Assasino',
             'lirili': 'Lirili Larila',
             'secret': 'Gizli Tank',
-            'shitty': 'Shitty Tank'
+            'shitty': 'Shitty Tank',
+            'op_tank': 'Top Secret OP Tank'
+        };
+        setChestMessage(`🎉 You got: ${names[tank]}! 🎉`);
+        setTimeout(() => setChestMessage(null), 5000);
+    };
+
+    const buyOpChest = () => {
+        if (totalCoins < 1000000) {
+            setChestMessage("Not enough points! You need 1,000,000.");
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+        setTotalCoins(prev => prev - 1000000);
+        const isOp = Math.random() < 0.3;
+        const tank = isOp ? 'op_tank' : 'shitty';
+        if (!unlockedTanks.includes(tank)) {
+            setUnlockedTanks(prev => [...prev, tank]);
+        }
+        const names: Record<string, string> = {
+            '67': '67 Tankı',
+            'brr': 'Brr Brr Patapim',
+            'tralalero': 'Tralalero Tralala',
+            'tung': 'Tung Tung Tung Sahur',
+            'cappucino': 'Cappucino Assasino',
+            'lirili': 'Lirili Larila',
+            'secret': 'Gizli Tank',
+            'shitty': 'Shitty Tank',
+            'op_tank': 'Top Secret OP Tank'
         };
         setChestMessage(`🎉 You got: ${names[tank]}! 🎉`);
         setTimeout(() => setChestMessage(null), 5000);
@@ -312,6 +340,12 @@ export default function App() {
                                 >
                                     <span>🎁 Gizli Tank Satın Al (100,000 pts)</span>
                                 </button>
+                                <button 
+                                    onClick={buyOpChest}
+                                    className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-all shadow-[0_0_15px_rgba(239,68,68,0.5)] flex items-center gap-2"
+                                >
+                                    <span>🔥 Top Secret OP Chest (1,000,000 pts)</span>
+                                </button>
                             </div>
                             
                             {chestMessage && (
@@ -332,7 +366,8 @@ export default function App() {
                                     { id: 'cappucino', name: 'Cappucino Assasino', speed: 'Fast', armor: 'Medium', dmg: 'Critical', color: 'text-amber-600', border: 'border-amber-700', bg: 'bg-amber-700/20' },
                                     { id: 'lirili', name: 'Lirili Larila', speed: 'Very Fast', armor: 'Medium', dmg: 'High', color: 'text-cyan-400', border: 'border-cyan-500', bg: 'bg-cyan-500/20' },
                                     { id: 'secret', name: 'Gizli Tank', speed: 'Very Fast', armor: 'Godlike', dmg: 'Rapid Fire', color: 'text-yellow-400', border: 'border-yellow-500', bg: 'bg-yellow-500/20' },
-                                    { id: 'shitty', name: 'Shitty Tank', speed: 'Slow', armor: 'Weak', dmg: 'Very Low', color: 'text-red-400', border: 'border-red-500', bg: 'bg-red-500/20' }
+                                    { id: 'shitty', name: 'Shitty Tank', speed: 'Slow', armor: 'Weak', dmg: 'Very Low', color: 'text-red-400', border: 'border-red-500', bg: 'bg-red-500/20' },
+                                    { id: 'op_tank', name: 'Top Secret OP Tank', speed: 'Insane', armor: 'Insane', dmg: 'Rapid Fire', color: 'text-red-500', border: 'border-red-600', bg: 'bg-red-600/20' }
                                 ].filter(t => unlockedTanks.includes(t.id)).map(t => (
                                     <div
                                         key={t.id}

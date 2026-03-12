@@ -20,6 +20,7 @@ export type Tank = {
     maxAmmo: number;
     isPlayer: boolean;
     color: string;
+    type?: string;
 };
 
 export type Projectile = {
@@ -91,7 +92,7 @@ export class GameEngine {
     private items: Item[] = [];
 
     public isPaused: boolean = false;
-    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty';
+    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
 
     private score: number = 0;
     private spawnTimer: number = 0;
@@ -103,7 +104,7 @@ export class GameEngine {
 
     private difficulty: 'easy' | 'normal' | 'hard';
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -150,6 +151,9 @@ export class GameEngine {
         } else if (this.playerTankType === 'shitty') {
             // Shitty Tank - Very bad
             radius = 22; health = 50; speed = 150; turn = 1.5; turretTurn = 2.0; reload = 2.0; damage = 10; maxAmmo = 20;
+        } else if (this.playerTankType === 'op_tank') {
+            // Top Secret OP Tank - Insane everything
+            radius = 24; health = 2000; speed = 600; turn = 7.0; turretTurn = 12.0; reload = 0.05; damage = 100; maxAmmo = 1000;
         }
 
         this.player = {

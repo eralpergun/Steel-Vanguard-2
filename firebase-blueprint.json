@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "A multiplayer game room",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "description": "4-character room code" },
+        "player1": { "type": "string", "description": "Player 1 UID" },
+        "player2": { "type": "string", "description": "Player 2 UID" },
+        "status": { "type": "string", "description": "waiting, playing, finished" }
+      },
+      "required": ["code", "status"]
+    },
+    "GameState": {
+      "title": "GameState",
+      "description": "The state of the game in a room",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string", "description": "Room ID" },
+        "p1x": { "type": "number", "description": "Player 1 X" },
+        "p1y": { "type": "number", "description": "Player 1 Y" },
+        "p2x": { "type": "number", "description": "Player 2 X" },
+        "p2y": { "type": "number", "description": "Player 2 Y" }
+      },
+      "required": ["roomId"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": { "$ref": "Room" },
+      "description": "Game rooms"
+    },
+    "/rooms/{roomId}/gameState": {
+      "schema": { "$ref": "GameState" },
+      "description": "Game state for a room"
+    }
+  }
+}
