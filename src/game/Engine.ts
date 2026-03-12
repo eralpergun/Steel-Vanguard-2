@@ -91,7 +91,7 @@ export class GameEngine {
     private items: Item[] = [];
 
     public isPaused: boolean = false;
-    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero';
+    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino';
 
     private score: number = 0;
     private spawnTimer: number = 0;
@@ -101,7 +101,7 @@ export class GameEngine {
     private camY: number = 0;
     private shakeAmount: number = 0;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero', onUpdateUI: (state: any) => void) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -126,6 +126,12 @@ export class GameEngine {
             radius = 18; health = 225; speed = 360; turn = 5.0; turretTurn = 8.0; reload = 0.22; damage = 22; maxAmmo = 200;
         } else if (this.playerTankType === 'tralalero') {
             radius = 30; health = 720; speed = 162; turn = 2.5; turretTurn = 4.0; reload = 1.1; damage = 180; maxAmmo = 50;
+        } else if (this.playerTankType === 'tung') {
+            // Tung Tung Tung Sahur - Fast, high damage, low health
+            radius = 18; health = 135; speed = 380; turn = 4.5; turretTurn = 7.0; reload = 0.55; damage = 65; maxAmmo = 120;
+        } else if (this.playerTankType === 'cappucino') {
+            // Cappucino Assasino - Medium speed, medium health, very high damage, slow reload
+            radius = 24; health = 225; speed = 250; turn = 3.5; turretTurn = 4.5; reload = 2.0; damage = 150; maxAmmo = 40;
         }
 
         this.player = {
