@@ -6,8 +6,52 @@ export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<GameEngine | null>(null);
     const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameover'>('menu');
-    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy'>('medium');
+    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero'>('medium');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
+
+    const [totalCoins, setTotalCoins] = useState(() => parseInt(localStorage.getItem('totalCoins') || '0'));
+    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(() => {
+        const saved = localStorage.getItem('unlockedTanks');
+        return saved ? JSON.parse(saved) : ['light', 'medium', 'heavy'];
+    });
+    const [chestMessage, setChestMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        localStorage.setItem('totalCoins', totalCoins.toString());
+    }, [totalCoins]);
+
+    useEffect(() => {
+        localStorage.setItem('unlockedTanks', JSON.stringify(unlockedTanks));
+    }, [unlockedTanks]);
+
+    const buyChest = () => {
+        if (totalCoins < 3000) {
+            setChestMessage("Not enough points! You need 3000.");
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+        
+        const brainrotTanks = ['67', 'brr', 'tralalero'];
+        const lockedTanks = brainrotTanks.filter(t => !unlockedTanks.includes(t));
+        
+        if (lockedTanks.length === 0) {
+            setChestMessage("You already unlocked all brainrot tanks!");
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+
+        setTotalCoins(prev => prev - 3000);
+        const randomTank = lockedTanks[Math.floor(Math.random() * lockedTanks.length)];
+        setUnlockedTanks(prev => [...prev, randomTank]);
+        
+        const names: Record<string, string> = {
+            '67': '67 Tankı',
+            'brr': 'Brr Brr Patapim',
+            'tralalero': 'Tralalero Tralala'
+        };
+        setChestMessage(`🎉 You unlocked: ${names[randomTank]}! 🎉`);
+        setTimeout(() => setChestMessage(null), 5000);
+    };
 
     useEffect(() => {
         if (gameState === 'playing' && canvasRef.current) {
@@ -15,6 +59,7 @@ export default function App() {
                 setUiState(state);
                 if (state.health <= 0) {
                     setGameState('gameover');
+                    setTotalCoins(prev => prev + state.score);
                     engine.stop();
                 }
             });
@@ -94,11 +139,15 @@ export default function App() {
 
             {/* Menus */}
             {gameState === 'menu' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950">
-                    <div className="text-center max-w-2xl p-8">
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950 overflow-y-auto">
+                    <div className="text-center max-w-4xl p-8 my-auto">
                         <ShieldAlert className="w-24 h-24 mx-auto text-emerald-500 mb-6" />
                         <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Steel Vanguard 2</h1>
-                        <p className="text-xl text-neutral-400 mb-8">Top-down armored warfare. Angle your hull to bounce shots, flank enemies for critical rear damage.</p>
+                        <p className="text-xl text-neutral-400 mb-4">Top-down armored warfare. Angle your hull to bounce shots, flank enemies for critical rear damage.</p>
+                        
+                        <div className="text-2xl font-mono font-bold text-yellow-400 mb-8 bg-black/40 inline-block px-6 py-2 rounded-full border border-yellow-500/30">
+                            Total Points: {totalCoins}
+                        </div>
 
                         <div className="grid grid-cols-2 gap-4 text-left bg-black/30 p-6 rounded-2xl mb-8 border border-white/5">
                             <div>
@@ -122,13 +171,31 @@ export default function App() {
                         </div>
 
                         <div className="mb-8">
-                            <h3 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">Select Your Vehicle</h3>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold text-white uppercase tracking-wider">Select Your Vehicle</h3>
+                                <button 
+                                    onClick={buyChest}
+                                    className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-6 rounded-lg transition-all shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2"
+                                >
+                                    <span>🎁 Buy Brainrot Chest (3000 pts)</span>
+                                </button>
+                            </div>
+                            
+                            {chestMessage && (
+                                <div className="mb-4 p-3 bg-purple-900/50 border border-purple-500 text-purple-200 rounded-lg font-bold animate-pulse">
+                                    {chestMessage}
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-3 gap-4">
                                 {[
                                     { id: 'light', name: 'Light Tank', speed: 'Fast', armor: 'Light', dmg: 'Low', color: 'text-blue-400', border: 'border-blue-500', bg: 'bg-blue-500/20' },
                                     { id: 'medium', name: 'Medium Tank', speed: 'Normal', armor: 'Medium', dmg: 'Normal', color: 'text-emerald-400', border: 'border-emerald-500', bg: 'bg-emerald-500/20' },
-                                    { id: 'heavy', name: 'Heavy Tank', speed: 'Slow', armor: 'Heavy', dmg: 'High', color: 'text-orange-400', border: 'border-orange-500', bg: 'bg-orange-500/20' }
-                                ].map(t => (
+                                    { id: 'heavy', name: 'Heavy Tank', speed: 'Slow', armor: 'Heavy', dmg: 'High', color: 'text-orange-400', border: 'border-orange-500', bg: 'bg-orange-500/20' },
+                                    { id: '67', name: '67 Tankı', speed: 'Very Fast', armor: 'Medium', dmg: 'Very High', color: 'text-purple-400', border: 'border-purple-500', bg: 'bg-purple-500/20' },
+                                    { id: 'brr', name: 'Brr Brr Patapim', speed: 'Fast', armor: 'Medium', dmg: 'Rapid Fire', color: 'text-pink-400', border: 'border-pink-500', bg: 'bg-pink-500/20' },
+                                    { id: 'tralalero', name: 'Tralalero Tralala', speed: 'Very Slow', armor: 'Godlike', dmg: 'Devastating', color: 'text-fuchsia-400', border: 'border-fuchsia-500', bg: 'bg-fuchsia-500/20' }
+                                ].filter(t => unlockedTanks.includes(t.id)).map(t => (
                                     <div
                                         key={t.id}
                                         onClick={() => setSelectedTank(t.id as any)}

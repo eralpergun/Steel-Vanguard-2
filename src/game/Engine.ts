@@ -90,13 +90,13 @@ export class GameEngine {
     private items: Item[] = [];
 
     public isPaused: boolean = false;
-    private playerTankType: 'light' | 'medium' | 'heavy';
+    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero';
 
     private score: number = 0;
     private spawnTimer: number = 0;
     private itemSpawnTimer: number = 2.0;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy', onUpdateUI: (state: any) => void) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -115,6 +115,12 @@ export class GameEngine {
         } else if (this.playerTankType === 'heavy') {
             // Buffed Heavy Tank
             radius = 26; health = 400; speed = 220; turn = 2.0; turretTurn = 3.5; reload = 1.5; damage = 100; maxAmmo = 30;
+        } else if (this.playerTankType === '67') {
+            radius = 22; health = 300; speed = 350; turn = 4.0; turretTurn = 6.0; reload = 0.8; damage = 120; maxAmmo = 100;
+        } else if (this.playerTankType === 'brr') {
+            radius = 18; health = 250; speed = 400; turn = 5.0; turretTurn = 8.0; reload = 0.2; damage = 25; maxAmmo = 200;
+        } else if (this.playerTankType === 'tralalero') {
+            radius = 30; health = 800; speed = 180; turn = 2.5; turretTurn = 4.0; reload = 1.0; damage = 200; maxAmmo = 50;
         }
 
         this.player = {
