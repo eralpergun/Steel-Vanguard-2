@@ -26,7 +26,7 @@ export default function App() {
                 const sorted = Object.entries(data)
                     .map(([username, score]) => ({ username, score: score as number }))
                     .sort((a, b) => b.score - a.score)
-                    .slice(0, 10);
+                    .slice(0, 5);
                 setLeaderboard(sorted);
             }
         };
