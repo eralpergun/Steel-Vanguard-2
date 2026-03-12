@@ -337,11 +337,11 @@ export class GameEngine {
             let res = resolveCircleCircle(this.player.x, this.player.y, this.player.radius, item.x, item.y, item.radius);
             if (res.hit) {
                 if (item.type === 'repair' && this.player.health < this.player.maxHealth) {
-                    let healAmount = 30;
+                    let healAmount = Math.ceil(this.player.maxHealth * 0.25);
                     this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
                     this.floatingTexts.push({
                         x: this.player.x, y: this.player.y - 30,
-                        text: "+30 ARMOR",
+                        text: `+${healAmount} ARMOR`,
                         life: 1.5, maxLife: 1.5,
                         color: "#10b981"
                     });
