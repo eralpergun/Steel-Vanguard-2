@@ -24,19 +24,32 @@ export default function App() {
         setIsLoggingIn(true);
         try {
             const dbRef = ref(db);
-            const snapshot = await get(child(dbRef, `users/${username}`));
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                setTotalCoins(data.totalCoins || 0);
-                setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
-            } else {
-                // Initialize new user
+            const isAdmin = username.toLowerCase() === 'eralpergun';
+            const allTanks = ['light', 'medium', 'heavy', '67', 'brr', 'tralalero'];
+            
+            if (isAdmin) {
+                // Admin override
                 await set(ref(db, `users/${username}`), {
-                    totalCoins: 0,
-                    unlockedTanks: ['light', 'medium', 'heavy']
+                    totalCoins: 999999999,
+                    unlockedTanks: allTanks
                 });
-                setTotalCoins(0);
-                setUnlockedTanks(['light', 'medium', 'heavy']);
+                setTotalCoins(999999999);
+                setUnlockedTanks(allTanks);
+            } else {
+                const snapshot = await get(child(dbRef, `users/${username}`));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    setTotalCoins(data.totalCoins || 0);
+                    setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
+                } else {
+                    // Initialize new user
+                    await set(ref(db, `users/${username}`), {
+                        totalCoins: 0,
+                        unlockedTanks: ['light', 'medium', 'heavy']
+                    });
+                    setTotalCoins(0);
+                    setUnlockedTanks(['light', 'medium', 'heavy']);
+                }
             }
             setGameState('menu');
         } catch (error) {
