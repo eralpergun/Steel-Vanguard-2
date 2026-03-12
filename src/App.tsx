@@ -10,12 +10,28 @@ export default function App() {
     const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('login');
     const [username, setUsername] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili'>('medium');
+    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty'>('medium');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
 
     const [totalCoins, setTotalCoins] = useState(0);
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
     const [chestMessage, setChestMessage] = useState<string | null>(null);
+    const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
+
+    useEffect(() => {
+        const fetchLeaderboard = async () => {
+            const snapshot = await get(child(ref(db), 'leaderboard'));
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const sorted = Object.entries(data)
+                    .map(([username, score]) => ({ username, score: score as number }))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+                setLeaderboard(sorted);
+            }
+        };
+        fetchLeaderboard();
+    }, [gameState]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -89,6 +105,32 @@ export default function App() {
         setTimeout(() => setChestMessage(null), 5000);
     };
 
+    const buySecretTank = () => {
+        if (totalCoins < 100000) {
+            setChestMessage("Not enough points! You need 100,000.");
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+        setTotalCoins(prev => prev - 100000);
+        const isSecret = Math.random() < 0.5;
+        const tank = isSecret ? 'secret' : 'shitty';
+        if (!unlockedTanks.includes(tank)) {
+            setUnlockedTanks(prev => [...prev, tank]);
+        }
+        const names: Record<string, string> = {
+            '67': '67 Tankı',
+            'brr': 'Brr Brr Patapim',
+            'tralalero': 'Tralalero Tralala',
+            'tung': 'Tung Tung Tung Sahur',
+            'cappucino': 'Cappucino Assasino',
+            'lirili': 'Lirili Larila',
+            'secret': 'Gizli Tank',
+            'shitty': 'Shitty Tank'
+        };
+        setChestMessage(`🎉 You got: ${names[tank]}! 🎉`);
+        setTimeout(() => setChestMessage(null), 5000);
+    };
+
     useEffect(() => {
         if (gameState === 'playing' && canvasRef.current) {
             const engine = new GameEngine(canvasRef.current, selectedTank, (state) => {
@@ -96,6 +138,16 @@ export default function App() {
                 if (state.health <= 0) {
                     setGameState('gameover');
                     setTotalCoins(prev => prev + state.score);
+                    
+                    // Update leaderboard
+                    const dbRef = ref(db);
+                    get(child(dbRef, `leaderboard/${username}`)).then(snapshot => {
+                        const currentScore = snapshot.exists() ? snapshot.val() : 0;
+                        if (state.score > currentScore) {
+                            set(ref(db, `leaderboard/${username}`), state.score);
+                        }
+                    });
+                    
                     engine.stop();
                 }
             });
@@ -178,7 +230,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950">
                     <div className="text-center max-w-md p-8 bg-black/40 rounded-3xl border border-white/10 backdrop-blur-md shadow-2xl">
                         <ShieldAlert className="w-20 h-20 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">Steel Vanguard 2</h1>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">Tank Fight</h1>
                         <p className="text-neutral-400 mb-8">Enter your username to load your progress.</p>
                         
                         <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -208,7 +260,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950 overflow-y-auto">
                     <div className="text-center max-w-4xl p-8 my-auto">
                         <ShieldAlert className="w-24 h-24 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Steel Vanguard 2</h1>
+                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Tank Fight</h1>
                         <p className="text-xl text-neutral-400 mb-4">Top-down armored warfare. Angle your hull to bounce shots, flank enemies for critical rear damage.</p>
                         
                         <div className="text-2xl font-mono font-bold text-yellow-400 mb-8 bg-black/40 inline-block px-6 py-2 rounded-full border border-yellow-500/30">
@@ -245,6 +297,12 @@ export default function App() {
                                 >
                                     <span>🎁 Buy Brainrot Chest (3000 pts)</span>
                                 </button>
+                                <button 
+                                    onClick={buySecretTank}
+                                    className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-6 rounded-lg transition-all shadow-[0_0_15px_rgba(202,138,4,0.5)] flex items-center gap-2"
+                                >
+                                    <span>🎁 Gizli Tank Satın Al (100,000 pts)</span>
+                                </button>
                             </div>
                             
                             {chestMessage && (
@@ -263,7 +321,9 @@ export default function App() {
                                     { id: 'tralalero', name: 'Tralalero Tralala', speed: 'Very Slow', armor: 'Godlike', dmg: 'Devastating', color: 'text-fuchsia-400', border: 'border-fuchsia-500', bg: 'bg-fuchsia-500/20' },
                                     { id: 'tung', name: 'Tung Tung Tung Sahur', speed: 'Insane', armor: 'Light', dmg: 'Insane', color: 'text-yellow-400', border: 'border-yellow-500', bg: 'bg-yellow-500/20' },
                                     { id: 'cappucino', name: 'Cappucino Assasino', speed: 'Fast', armor: 'Medium', dmg: 'Critical', color: 'text-amber-600', border: 'border-amber-700', bg: 'bg-amber-700/20' },
-                                    { id: 'lirili', name: 'Lirili Larila', speed: 'Very Fast', armor: 'Medium', dmg: 'High', color: 'text-cyan-400', border: 'border-cyan-500', bg: 'bg-cyan-500/20' }
+                                    { id: 'lirili', name: 'Lirili Larila', speed: 'Very Fast', armor: 'Medium', dmg: 'High', color: 'text-cyan-400', border: 'border-cyan-500', bg: 'bg-cyan-500/20' },
+                                    { id: 'secret', name: 'Gizli Tank', speed: 'Very Fast', armor: 'Godlike', dmg: 'Rapid Fire', color: 'text-yellow-400', border: 'border-yellow-500', bg: 'bg-yellow-500/20' },
+                                    { id: 'shitty', name: 'Shitty Tank', speed: 'Slow', armor: 'Weak', dmg: 'Very Low', color: 'text-red-400', border: 'border-red-500', bg: 'bg-red-500/20' }
                                 ].filter(t => unlockedTanks.includes(t.id)).map(t => (
                                     <div
                                         key={t.id}
@@ -278,6 +338,30 @@ export default function App() {
                                         </ul>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+
+                        <div className="mb-8">
+                            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4">Leaderboard</h3>
+                            <div className="bg-black/30 p-6 rounded-2xl border border-white/5">
+                                <table className="w-full text-left text-neutral-300">
+                                    <thead>
+                                        <tr className="text-emerald-400">
+                                            <th className="pb-2">Rank</th>
+                                            <th className="pb-2">Username</th>
+                                            <th className="pb-2 text-right">Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {leaderboard.map((entry, index) => (
+                                            <tr key={entry.username} className="border-t border-white/5">
+                                                <td className="py-2 font-mono">{index + 1}</td>
+                                                <td className="py-2">{entry.username}</td>
+                                                <td className="py-2 text-right font-mono text-yellow-400">{entry.score}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 

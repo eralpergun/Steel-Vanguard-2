@@ -91,7 +91,7 @@ export class GameEngine {
     private items: Item[] = [];
 
     public isPaused: boolean = false;
-    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili';
+    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty';
 
     private score: number = 0;
     private spawnTimer: number = 0;
@@ -101,7 +101,7 @@ export class GameEngine {
     private camY: number = 0;
     private shakeAmount: number = 0;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili', onUpdateUI: (state: any) => void) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -135,6 +135,12 @@ export class GameEngine {
         } else if (this.playerTankType === 'lirili') {
             // Lirili Larila - Balanced but with a special ability (could be implemented later, for now fast and agile)
             radius = 19; health = 160; speed = 300; turn = 6.0; turretTurn = 9.0; reload = 0.75; damage = 55; maxAmmo = 70;
+        } else if (this.playerTankType === 'secret') {
+            // Secret Tank - Rapid fire, high armor, very fast
+            radius = 20; health = 700; speed = 450; turn = 6.0; turretTurn = 10.0; reload = 0.1; damage = 30; maxAmmo = 500;
+        } else if (this.playerTankType === 'shitty') {
+            // Shitty Tank - Very bad
+            radius = 22; health = 50; speed = 150; turn = 1.5; turretTurn = 2.0; reload = 2.0; damage = 10; maxAmmo = 20;
         }
 
         this.player = {
@@ -351,9 +357,12 @@ export class GameEngine {
 
         // --- Enemy Spawning ---
         this.spawnTimer -= dt;
-        let maxEnemies = 6 + Math.floor(this.score / 1000);
+        let maxEnemies = 6 + Math.floor(this.score / 500);
+        if (this.score >= 1000) {
+            maxEnemies = 10 + Math.floor((this.score - 1000) / 500);
+        }
         if (this.spawnTimer <= 0 && this.enemies.length < maxEnemies) {
-            this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / 1000) * 0.2);
+            this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / 500) * 0.1);
             let angle = Math.random() * Math.PI * 2;
             let dist = Math.max(this.canvas.width, this.canvas.height) + 200;
             
