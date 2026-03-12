@@ -302,12 +302,20 @@ export default function App() {
                     <div className="text-center">
                         <h2 className="text-6xl font-black uppercase tracking-tighter text-red-500 mb-4">Vehicle Destroyed</h2>
                         <p className="text-2xl text-neutral-300 mb-8">Final Score: <span className="text-emerald-400 font-mono font-bold">{uiState.score}</span></p>
-                        <button
-                            onClick={() => setGameState('playing')}
-                            className="bg-white text-black font-bold text-xl py-4 px-12 rounded-full transition-all hover:scale-105 active:scale-95 pointer-events-auto"
-                        >
-                            REDEPLOY
-                        </button>
+                        <div className="flex flex-col gap-4 items-center">
+                            <button
+                                onClick={() => setGameState('playing')}
+                                className="bg-white text-black font-bold text-xl py-4 px-12 rounded-full transition-all hover:scale-105 active:scale-95 pointer-events-auto w-64"
+                            >
+                                REDEPLOY
+                            </button>
+                            <button
+                                onClick={() => setGameState('menu')}
+                                className="bg-neutral-700 hover:bg-neutral-600 text-white font-bold text-lg py-3 px-8 rounded-full transition-all hover:scale-105 active:scale-95 pointer-events-auto w-64"
+                            >
+                                ANASAYFAYA DÖN
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -330,12 +338,13 @@ export default function App() {
                             </button>
                             <button
                                 onClick={() => {
+                                    setTotalCoins(prev => prev + uiState.score);
                                     setGameState('menu');
                                     if (engineRef.current) engineRef.current.stop();
                                 }}
                                 className="bg-neutral-700 hover:bg-neutral-600 text-white font-bold text-lg py-3 px-8 rounded-full transition-all hover:scale-105 active:scale-95 pointer-events-auto w-64"
                             >
-                                QUIT TO MENU
+                                ANASAYFAYA DÖN
                             </button>
                         </div>
                     </div>
