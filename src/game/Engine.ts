@@ -342,22 +342,31 @@ export class GameEngine {
 
         // --- Enemy Spawning ---
         this.spawnTimer -= dt;
-        if (this.spawnTimer <= 0 && this.enemies.length < 6) {
-            this.spawnTimer = 4.0;
+        let maxEnemies = this.score >= 1000 ? 12 : 6;
+        if (this.spawnTimer <= 0 && this.enemies.length < maxEnemies) {
+            this.spawnTimer = this.score >= 1000 ? 2.0 : 4.0;
             let angle = Math.random() * Math.PI * 2;
             let dist = Math.max(this.canvas.width, this.canvas.height) + 200;
+            
+            // Harder enemies
+            let enemyHealth = 50 + Math.floor(this.score / 500) * 20;
+            let enemyDamage = 20 + Math.floor(this.score / 500) * 5;
+            let enemySpeed = 120 + Math.floor(this.score / 500) * 10;
+            let enemyReload = Math.max(2.0, 5 - Math.floor(this.score / 500) * 0.5);
+
             this.enemies.push({
                 id: this.nextId++,
                 x: this.player.x + Math.cos(angle) * dist,
                 y: this.player.y + Math.sin(angle) * dist,
                 radius: 20,
                 hullAngle: 0, turretAngle: 0,
-                speed: 0, maxSpeed: 120,
-                turnSpeed: 1.5, turretTurnSpeed: 2.0,
-                health: 50, maxHealth: 50,
-                reloadTimer: 0, reloadTime: 5,
+                speed: 0, maxSpeed: enemySpeed,
+                turnSpeed: 1.5 + Math.floor(this.score / 500) * 0.2, 
+                turretTurnSpeed: 2.0 + Math.floor(this.score / 500) * 0.2,
+                health: enemyHealth, maxHealth: enemyHealth,
+                reloadTimer: 0, reloadTime: enemyReload,
                 speedBuffTimer: 0,
-                damage: 20,
+                damage: enemyDamage,
                 ammo: 999, // Enemies have infinite ammo for now
                 maxAmmo: 999,
                 isPlayer: false, color: '#ef4444' // red-500
