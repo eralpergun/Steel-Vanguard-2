@@ -101,10 +101,13 @@ export class GameEngine {
     private camY: number = 0;
     private shakeAmount: number = 0;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty', onUpdateUI: (state: any) => void) {
+    private difficulty: 'easy' | 'normal' | 'hard';
+
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
+        this.difficulty = difficulty;
         this.onUpdateUI = onUpdateUI;
 
         this.init();
@@ -114,6 +117,12 @@ export class GameEngine {
     private init() {
         // Balanced Medium Tank (Default)
         let radius = 20, health = 180, speed = 225, turn = 3.0, turretTurn = 5.0, reload = 1.1, damage = 45, maxAmmo = 50;
+        
+        let startEnemies = 6;
+        if (this.difficulty === 'easy') startEnemies = 4;
+        else if (this.difficulty === 'hard') startEnemies = 8;
+
+        // ... (rest of init)
         if (this.playerTankType === 'light') {
             // Balanced Light Tank
             radius = 16; health = 108; speed = 360; turn = 4.5; turretTurn = 6.0; reload = 0.66; damage = 27; maxAmmo = 80;
@@ -357,20 +366,28 @@ export class GameEngine {
 
         // --- Enemy Spawning ---
         this.spawnTimer -= dt;
-        let maxEnemies = 6 + Math.floor(this.score / 500);
-        if (this.score >= 1000) {
-            maxEnemies = 10 + Math.floor((this.score - 1000) / 500);
+        let baseMaxEnemies = 6;
+        let scoreInterval = 500;
+        if (this.difficulty === 'easy') {
+            baseMaxEnemies = 4;
+            scoreInterval = 1000;
+        } else if (this.difficulty === 'hard') {
+            baseMaxEnemies = 8;
+            scoreInterval = 250;
         }
+        
+        let maxEnemies = baseMaxEnemies + Math.floor(this.score / scoreInterval);
+        
         if (this.spawnTimer <= 0 && this.enemies.length < maxEnemies) {
-            this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / 500) * 0.1);
+            this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / scoreInterval) * 0.1);
             let angle = Math.random() * Math.PI * 2;
             let dist = Math.max(this.canvas.width, this.canvas.height) + 200;
             
             // Harder enemies
-            let enemyHealth = 50 + Math.floor(this.score / 500) * 20;
-            let enemyDamage = 20 + Math.floor(this.score / 500) * 5;
-            let enemySpeed = 120 + Math.floor(this.score / 500) * 10;
-            let enemyReload = Math.max(2.0, 5 - Math.floor(this.score / 500) * 0.5);
+            let enemyHealth = 50 + Math.floor(this.score / scoreInterval) * 20;
+            let enemyDamage = 20 + Math.floor(this.score / scoreInterval) * 5;
+            let enemySpeed = 120 + Math.floor(this.score / scoreInterval) * 10;
+            let enemyReload = Math.max(2.0, 5 - Math.floor(this.score / scoreInterval) * 0.5);
 
             this.enemies.push({
                 id: this.nextId++,

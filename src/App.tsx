@@ -11,6 +11,7 @@ export default function App() {
     const [username, setUsername] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty'>('medium');
+    const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
 
     const [totalCoins, setTotalCoins] = useState(0);
@@ -135,7 +136,7 @@ export default function App() {
 
     useEffect(() => {
         if (gameState === 'playing' && canvasRef.current) {
-            const engine = new GameEngine(canvasRef.current, selectedTank, (state) => {
+            const engine = new GameEngine(canvasRef.current, selectedTank, difficulty, (state) => {
                 setUiState(state);
                 if (state.health <= 0) {
                     setGameState('gameover');
@@ -223,7 +224,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950">
                     <div className="text-center max-w-md p-8 bg-black/40 rounded-3xl border border-white/10 backdrop-blur-md shadow-2xl">
                         <ShieldAlert className="w-20 h-20 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">tankfight</h1>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">Tank Fight</h1>
                         <p className="text-neutral-400 mb-8">Enter your username to load your progress.</p>
                         
                         <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -253,11 +254,26 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950 overflow-y-auto">
                     <div className="text-center max-w-4xl p-8 my-auto">
                         <ShieldAlert className="w-24 h-24 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">tankfight</h1>
+                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Tank Fight</h1>
                         <p className="text-xl text-neutral-400 mb-4">Top-down armored warfare. Angle your hull to bounce shots, flank enemies for critical rear damage.</p>
                         
                         <div className="text-2xl font-mono font-bold text-yellow-400 mb-8 bg-black/40 inline-block px-6 py-2 rounded-full border border-yellow-500/30">
                             Total Points: {totalCoins}
+                        </div>
+
+                        <div className="mb-8">
+                            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4">Difficulty</h3>
+                            <div className="flex justify-center gap-4">
+                                {(['easy', 'normal', 'hard'] as const).map((d) => (
+                                    <button
+                                        key={d}
+                                        onClick={() => setDifficulty(d)}
+                                        className={`px-6 py-2 rounded-lg font-bold uppercase transition-all ${difficulty === d ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(5,150,105,0.5)]' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}`}
+                                    >
+                                        {d}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 text-left bg-black/30 p-6 rounded-2xl mb-8 border border-white/5">
