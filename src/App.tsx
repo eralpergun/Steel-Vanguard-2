@@ -25,14 +25,14 @@ export default function App() {
         try {
             const dbRef = ref(db);
             
-            const snapshot = await get(child(dbRef, `users/${username}`));
+            const snapshot = await get(child(dbRef, `players/${username}`));
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 setTotalCoins(data.totalCoins || 0);
                 setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
             } else {
                 // Initialize new user
-                await set(ref(db, `users/${username}`), {
+                await set(ref(db, `players/${username}`), {
                     totalCoins: 0,
                     unlockedTanks: ['light', 'medium', 'heavy']
                 });
@@ -50,7 +50,7 @@ export default function App() {
 
     useEffect(() => {
         if (gameState !== 'login' && username) {
-            set(ref(db, `users/${username}`), {
+            set(ref(db, `players/${username}`), {
                 totalCoins,
                 unlockedTanks
             }).catch(console.error);
