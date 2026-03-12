@@ -137,10 +137,10 @@ export class GameEngine {
         } else if (this.playerTankType === 'tralalero') {
             radius = 30; health = 720; speed = 162; turn = 2.5; turretTurn = 4.0; reload = 1.1; damage = 180; maxAmmo = 50;
         } else if (this.playerTankType === 'tung') {
-            // Tung Tung Midnight - Fast, high damage, low health
+            // Tung Tung Sahur - Fast, high damage, low health
             radius = 18; health = 135; speed = 380; turn = 4.5; turretTurn = 7.0; reload = 0.55; damage = 65; maxAmmo = 120;
         } else if (this.playerTankType === 'cappucino') {
-            // Cappuccino Assassin - Medium speed, medium health, very high damage, slow reload
+            // Cappucino Assasino - Medium speed, medium health, very high damage, slow reload
             radius = 24; health = 225; speed = 250; turn = 3.5; turretTurn = 4.5; reload = 2.0; damage = 150; maxAmmo = 40;
         } else if (this.playerTankType === 'lirili') {
             // Lirili Larila - Balanced but with a special ability

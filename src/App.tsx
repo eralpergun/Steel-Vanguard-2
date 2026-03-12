@@ -112,8 +112,8 @@ export default function App() {
             '67': '67 Tank',
             'brr': 'Brr Brr Blast',
             'tralalero': 'Tralalero Tralala',
-            'tung': 'Tung Tung Midnight',
-            'cappucino': 'Cappuccino Assassin',
+            'tung': 'Tung Tung Sahur',
+            'cappucino': 'Cappucino Assasino',
             'lirili': 'Lirili Larila'
         };
         setChestMessage(`🎉 You unlocked: ${names[randomTank]}! 🎉`);
@@ -184,11 +184,11 @@ export default function App() {
     ];
 
     const brainrotStats = [
-        { id: '67', name: '67 Tank', desc: 'Industrial Power', hp: 270, speed: 315, armor: 'High', dmg: 108 },
+        { id: '67', name: '67 Tank', desc: 'Zonguldak Power', hp: 270, speed: 315, armor: 'High', dmg: 108 },
         { id: 'brr', name: 'Brr Brr', desc: 'Blast Wave', hp: 225, speed: 360, armor: 'Medium', dmg: 22 },
         { id: 'tralalero', name: 'Tralalero', desc: 'Tralala', hp: 720, speed: 162, armor: 'Extreme', dmg: 180 },
-        { id: 'tung', name: 'Tung Tung', desc: 'Midnight Special', hp: 135, speed: 380, armor: 'Low', dmg: 65 },
-        { id: 'cappucino', name: 'Cappuccino', desc: 'Assassin', hp: 225, speed: 250, armor: 'Medium', dmg: 150 },
+        { id: 'tung', name: 'Tung Tung', desc: 'Sahur Special', hp: 135, speed: 380, armor: 'Low', dmg: 65 },
+        { id: 'cappucino', name: 'Cappucino Assasino', desc: 'Assassin', hp: 225, speed: 250, armor: 'Medium', dmg: 150 },
         { id: 'lirili', name: 'Lirili', desc: 'Larila', hp: 160, speed: 300, armor: 'Medium', dmg: 55 },
     ];
 
@@ -434,7 +434,7 @@ export default function App() {
                             <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-64">
                                 <div className="flex justify-between items-end mb-2">
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Armor Integrity</span>
-                                    <span className="text-xl font-mono font-bold text-emerald-500">{Math.ceil(uiState.health)}%</span>
+                                    <span className="text-xl font-mono font-bold text-emerald-500">{Math.ceil(uiState.health)}</span>
                                 </div>
                                 <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                                     <div 
