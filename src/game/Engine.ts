@@ -29,6 +29,7 @@ export type Projectile = {
     damage: number;
     ownerId: number;
     life: number;
+    trail: {x: number, y: number}[];
 };
 
 export type Obstacle = {
@@ -96,6 +97,10 @@ export class GameEngine {
     private spawnTimer: number = 0;
     private itemSpawnTimer: number = 2.0;
 
+    private camX: number = 0;
+    private camY: number = 0;
+    private shakeAmount: number = 0;
+
     constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
@@ -140,6 +145,8 @@ export class GameEngine {
             isPlayer: true,
             color: '#10b981' // emerald-500
         };
+        this.camX = this.player.x;
+        this.camY = this.player.y;
 
         // Generate a war-torn city layout
         this.obstacles = [];
@@ -254,10 +261,13 @@ export class GameEngine {
         }
 
         // Mouse aiming
-        const camX = this.player.x - this.canvas.width / 2;
-        const camY = this.player.y - this.canvas.height / 2;
-        const mouseWorldX = this.mouseX + camX;
-        const mouseWorldY = this.mouseY + camY;
+        const targetCamX = this.player.x - this.canvas.width / 2;
+        const targetCamY = this.player.y - this.canvas.height / 2;
+        this.camX += (targetCamX - this.camX) * 5 * dt;
+        this.camY += (targetCamY - this.camY) * 5 * dt;
+
+        const mouseWorldX = this.mouseX + this.camX;
+        const mouseWorldY = this.mouseY + this.camY;
 
         const targetAngle = Math.atan2(mouseWorldY - this.player.y, mouseWorldX - this.player.x);
         this.player.turretAngle = moveTowardsAngle(this.player.turretAngle, targetAngle, this.player.turretTurnSpeed * dt);
@@ -421,6 +431,9 @@ export class GameEngine {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
             p.life -= dt;
+            
+            p.trail.push({x: p.x, y: p.y});
+            if (p.trail.length > 10) p.trail.shift();
 
             let destroyed = false;
             if (p.life <= 0) destroyed = true;
@@ -479,6 +492,10 @@ export class GameEngine {
                             color: color
                         });
 
+                        if (tank.isPlayer) {
+                            this.shakeAmount = 15; // Screen shake on player hit
+                        }
+
                         break;
                     }
                 }
@@ -507,9 +524,16 @@ export class GameEngine {
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             if (this.enemies[i].health <= 0) {
                 this.spawnExplosion(this.enemies[i].x, this.enemies[i].y, '#ef4444', 30);
+                this.shakeAmount = 10; // Screen shake on enemy death
                 this.enemies.splice(i, 1);
                 this.score += 100;
             }
+        }
+
+        // Screen shake decay
+        if (this.shakeAmount > 0) {
+            this.shakeAmount -= dt * 30;
+            if (this.shakeAmount < 0) this.shakeAmount = 0;
         }
 
         // --- UI Update ---
@@ -542,11 +566,15 @@ export class GameEngine {
             radius: 4,
             damage: tank.damage,
             ownerId: tank.id,
-            life: 2.0
+            life: 2.0,
+            trail: []
         });
 
         // Muzzle flash
         this.spawnExplosion(px, py, '#f59e0b', 8);
+        if (tank.isPlayer) {
+            this.shakeAmount = 5; // Small shake on fire
+        }
     }
 
     private spawnExplosion(x: number, y: number, color: string, count: number) {
@@ -567,13 +595,20 @@ export class GameEngine {
 
     private draw() {
         // Background - Cracked asphalt / concrete color
-        this.ctx.fillStyle = '#262626'; 
+        this.ctx.fillStyle = '#1a1a1a'; 
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.ctx.save();
-        const camX = this.player.x - this.canvas.width / 2;
-        const camY = this.player.y - this.canvas.height / 2;
-        this.ctx.translate(-camX, -camY);
+        
+        // Apply screen shake
+        let shakeOffsetX = 0;
+        let shakeOffsetY = 0;
+        if (this.shakeAmount > 0) {
+            shakeOffsetX = (Math.random() - 0.5) * this.shakeAmount;
+            shakeOffsetY = (Math.random() - 0.5) * this.shakeAmount;
+        }
+
+        this.ctx.translate(-this.camX + shakeOffsetX, -this.camY + shakeOffsetY);
 
         // Draw Ground Details (Decorations)
         for (let dec of this.decorations) {
@@ -600,16 +635,16 @@ export class GameEngine {
 
         // Draw Grid (Subtle pavement lines)
         const gridSize = 200;
-        const offsetX = -camX % gridSize;
-        const offsetY = -camY % gridSize;
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-        this.ctx.lineWidth = 1;
+        const offsetX = -this.camX % gridSize;
+        const offsetY = -this.camY % gridSize;
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         for (let x = offsetX - gridSize; x < this.canvas.width + gridSize; x += gridSize) {
-            this.ctx.moveTo(camX + x, camY); this.ctx.lineTo(camX + x, camY + this.canvas.height);
+            this.ctx.moveTo(this.camX + x, this.camY); this.ctx.lineTo(this.camX + x, this.camY + this.canvas.height);
         }
         for (let y = offsetY - gridSize; y < this.canvas.height + gridSize; y += gridSize) {
-            this.ctx.moveTo(camX, camY + y); this.ctx.lineTo(camX + this.canvas.width, camY + y);
+            this.ctx.moveTo(this.camX, this.camY + y); this.ctx.lineTo(this.camX + this.canvas.width, this.camY + y);
         }
         this.ctx.stroke();
 
@@ -620,23 +655,29 @@ export class GameEngine {
 
         // Draw Items
         for (let item of this.items) {
+            this.ctx.save();
+            this.ctx.shadowBlur = 15;
             if (item.type === 'repair') {
+                this.ctx.shadowColor = '#10b981';
                 this.ctx.fillStyle = '#10b981'; // emerald-500
                 this.ctx.beginPath();
                 this.ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 // Draw plus sign
+                this.ctx.shadowBlur = 0;
                 this.ctx.fillStyle = '#ffffff';
                 this.ctx.fillRect(item.x - 2, item.y - 8, 4, 16);
                 this.ctx.fillRect(item.x - 8, item.y - 2, 16, 4);
             } else if (item.type === 'speed') {
+                this.ctx.shadowColor = '#3b82f6';
                 this.ctx.fillStyle = '#3b82f6'; // blue-500
                 this.ctx.beginPath();
                 this.ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 // Draw forward arrows (>>)
+                this.ctx.shadowBlur = 0;
                 this.ctx.fillStyle = '#ffffff';
                 this.ctx.beginPath();
                 this.ctx.moveTo(item.x - 4, item.y - 6);
@@ -645,18 +686,21 @@ export class GameEngine {
                 this.ctx.lineTo(item.x - 2, item.y);
                 this.ctx.fill();
             } else if (item.type === 'ammo') {
+                this.ctx.shadowColor = '#f59e0b';
                 this.ctx.fillStyle = '#f59e0b'; // amber-500
                 this.ctx.beginPath();
                 this.ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 // Draw bullet icon (simple rectangle)
+                this.ctx.shadowBlur = 0;
                 this.ctx.fillStyle = '#ffffff';
                 this.ctx.fillRect(item.x - 3, item.y - 6, 6, 12);
                 this.ctx.beginPath();
                 this.ctx.arc(item.x, item.y - 6, 3, 0, Math.PI, true);
                 this.ctx.fill();
             }
+            this.ctx.restore();
         }
 
         // Draw Tanks
@@ -666,22 +710,43 @@ export class GameEngine {
         }
 
         // Draw Projectiles
-        this.ctx.fillStyle = '#fde047'; // yellow-300
         for (let p of this.projectiles) {
+            // Draw trail
+            if (p.trail.length > 1) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                for (let i = 1; i < p.trail.length; i++) {
+                    this.ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                }
+                this.ctx.strokeStyle = 'rgba(253, 224, 71, 0.4)'; // yellow-300 with alpha
+                this.ctx.lineWidth = p.radius * 1.5;
+                this.ctx.lineCap = 'round';
+                this.ctx.stroke();
+            }
+
+            // Draw projectile head
+            this.ctx.save();
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = '#fde047';
+            this.ctx.fillStyle = '#fde047'; // yellow-300
             this.ctx.beginPath();
             this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             this.ctx.fill();
+            this.ctx.restore();
         }
 
         // Draw Particles
         for (let p of this.particles) {
             this.ctx.globalAlpha = p.life / p.maxLife;
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = p.color;
             this.ctx.fillStyle = p.color;
             this.ctx.beginPath();
             this.ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
             this.ctx.fill();
         }
         this.ctx.globalAlpha = 1.0;
+        this.ctx.shadowBlur = 0;
 
         // Draw Floating Texts
         this.ctx.font = 'bold 14px "Inter", sans-serif';
@@ -753,41 +818,82 @@ export class GameEngine {
         this.ctx.save();
         this.ctx.translate(tank.x, tank.y);
 
+        // Tank drop shadow
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowOffsetX = 5;
+        this.ctx.shadowOffsetY = 5;
+
         // Draw hull
         this.ctx.save();
         this.ctx.rotate(tank.hullAngle);
         
         // Treads
-        this.ctx.fillStyle = '#171717'; // neutral-900
+        this.ctx.fillStyle = '#111111'; // darker neutral
         this.ctx.fillRect(-tank.radius*1.1, -tank.radius, tank.radius*2.2, tank.radius*0.4);
         this.ctx.fillRect(-tank.radius*1.1, tank.radius*0.6, tank.radius*2.2, tank.radius*0.4);
         
-        // Main body
-        this.ctx.fillStyle = tank.color;
-        this.ctx.fillRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6);
+        // Tread details (lines)
+        this.ctx.fillStyle = '#262626';
+        for(let i = -tank.radius; i < tank.radius; i += 6) {
+            this.ctx.fillRect(i, -tank.radius, 2, tank.radius*0.4);
+            this.ctx.fillRect(i, tank.radius*0.6, 2, tank.radius*0.4);
+        }
+
+        // Main body with gradient
+        const hullGradient = this.ctx.createLinearGradient(-tank.radius, -tank.radius, tank.radius, tank.radius);
+        hullGradient.addColorStop(0, tank.color);
+        hullGradient.addColorStop(1, '#064e3b'); // darker shade
+        
+        this.ctx.fillStyle = hullGradient;
+        this.ctx.beginPath();
+        this.ctx.roundRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6, 4);
+        this.ctx.fill();
+        
+        // Hull border
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
         
         // Front indicator (white stripe)
-        this.ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        this.ctx.fillRect(tank.radius*0.6, -tank.radius*0.2, tank.radius*0.4, tank.radius*0.4);
+        this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        this.ctx.fillRect(tank.radius*0.6, -tank.radius*0.2, tank.radius*0.3, tank.radius*0.4);
         this.ctx.restore();
+
+        // Reset shadow for turret
+        this.ctx.shadowBlur = 5;
+        this.ctx.shadowOffsetX = 2;
+        this.ctx.shadowOffsetY = 2;
 
         // Draw turret
         this.ctx.save();
         this.ctx.rotate(tank.turretAngle);
         
         // Barrel
-        this.ctx.fillStyle = '#525252'; // neutral-600
+        const barrelGradient = this.ctx.createLinearGradient(0, -4, tank.radius + 20, 8);
+        barrelGradient.addColorStop(0, '#525252');
+        barrelGradient.addColorStop(1, '#262626');
+        this.ctx.fillStyle = barrelGradient;
         this.ctx.fillRect(0, -4, tank.radius + 20, 8);
+        this.ctx.strokeRect(0, -4, tank.radius + 20, 8);
         
         // Turret body
-        this.ctx.fillStyle = '#404040'; // neutral-700
+        const turretGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, tank.radius * 0.6);
+        turretGradient.addColorStop(0, '#525252');
+        turretGradient.addColorStop(1, '#262626');
+        this.ctx.fillStyle = turretGradient;
         this.ctx.beginPath();
         this.ctx.arc(0, 0, tank.radius * 0.6, 0, Math.PI * 2);
         this.ctx.fill();
-        this.ctx.strokeStyle = '#262626';
+        this.ctx.strokeStyle = '#171717';
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
         this.ctx.restore();
+
+        // Reset shadow completely
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
 
         // Health bar (only for enemies)
         if (!tank.isPlayer) {
