@@ -110,7 +110,7 @@ export default function App() {
         
         const names: Record<string, string> = {
             '67': '67 Tank',
-            'brr': 'Brr Brr Blast',
+            'brr': 'Brr Brr Patapim',
             'tralalero': 'Tralalero Tralala',
             'tung': 'Tung Tung Sahur',
             'cappucino': 'Cappucino Assasino',
@@ -185,7 +185,7 @@ export default function App() {
 
     const brainrotStats = [
         { id: '67', name: '67 Tank', desc: 'Zonguldak Power', hp: 270, speed: 315, armor: 'High', dmg: 108 },
-        { id: 'brr', name: 'Brr Brr', desc: 'Blast Wave', hp: 225, speed: 360, armor: 'Medium', dmg: 22 },
+        { id: 'brr', name: 'Brr Brr Patapim', desc: 'Blast Wave', hp: 225, speed: 360, armor: 'Medium', dmg: 22 },
         { id: 'tralalero', name: 'Tralalero', desc: 'Tralala', hp: 720, speed: 162, armor: 'Extreme', dmg: 180 },
         { id: 'tung', name: 'Tung Tung', desc: 'Sahur Special', hp: 135, speed: 380, armor: 'Low', dmg: 65 },
         { id: 'cappucino', name: 'Cappucino Assasino', desc: 'Assassin', hp: 225, speed: 250, armor: 'Medium', dmg: 150 },
