@@ -107,11 +107,14 @@ export class GameEngine {
     }
 
     private init() {
-        let radius = 20, health = 100, speed = 200, turn = 2.5, turretTurn = 4.0, reload = 1.5, damage = 25, maxAmmo = 20;
+        // Buffed Medium Tank (Default)
+        let radius = 20, health = 200, speed = 250, turn = 3.0, turretTurn = 5.0, reload = 1.0, damage = 50, maxAmmo = 50;
         if (this.playerTankType === 'light') {
-            radius = 16; health = 60; speed = 300; turn = 3.5; turretTurn = 5.0; reload = 1.0; damage = 15; maxAmmo = 30;
+            // Buffed Light Tank
+            radius = 16; health = 120; speed = 400; turn = 4.5; turretTurn = 6.0; reload = 0.6; damage = 30; maxAmmo = 80;
         } else if (this.playerTankType === 'heavy') {
-            radius = 26; health = 200; speed = 120; turn = 1.5; turretTurn = 2.5; reload = 2.5; damage = 45; maxAmmo = 10;
+            // Buffed Heavy Tank
+            radius = 26; health = 400; speed = 160; turn = 2.0; turretTurn = 3.5; reload = 1.5; damage = 100; maxAmmo = 30;
         }
 
         this.player = {
