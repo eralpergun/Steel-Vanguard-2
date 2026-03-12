@@ -1,39 +1,35 @@
 {
   "entities": {
-    "Room": {
-      "title": "Room",
-      "description": "A multiplayer game room",
+    "Player": {
+      "title": "Player",
+      "description": "Player progress and stats",
       "type": "object",
       "properties": {
-        "code": { "type": "string", "description": "4-character room code" },
-        "player1": { "type": "string", "description": "Player 1 UID" },
-        "player2": { "type": "string", "description": "Player 2 UID" },
-        "status": { "type": "string", "description": "waiting, playing, finished" }
+        "username": { "type": "string" },
+        "totalCoins": { "type": "number" },
+        "unlockedTanks": { "type": "array", "items": { "type": "string" } }
       },
-      "required": ["code", "status"]
+      "required": ["username", "totalCoins", "unlockedTanks"]
     },
-    "GameState": {
-      "title": "GameState",
-      "description": "The state of the game in a room",
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Entry in the global leaderboard",
       "type": "object",
       "properties": {
-        "roomId": { "type": "string", "description": "Room ID" },
-        "p1x": { "type": "number", "description": "Player 1 X" },
-        "p1y": { "type": "number", "description": "Player 1 Y" },
-        "p2x": { "type": "number", "description": "Player 2 X" },
-        "p2y": { "type": "number", "description": "Player 2 Y" }
+        "username": { "type": "string" },
+        "score": { "type": "number" }
       },
-      "required": ["roomId"]
+      "required": ["username", "score"]
     }
   },
   "firestore": {
-    "/rooms/{roomId}": {
-      "schema": { "$ref": "Room" },
-      "description": "Game rooms"
+    "/players/{username}": {
+      "schema": { "$ref": "Player" },
+      "description": "Player data"
     },
-    "/rooms/{roomId}/gameState": {
-      "schema": { "$ref": "GameState" },
-      "description": "Game state for a room"
+    "/leaderboard/{username}": {
+      "schema": { "$ref": "LeaderboardEntry" },
+      "description": "Leaderboard data"
     }
   }
 }
