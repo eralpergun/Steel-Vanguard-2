@@ -91,7 +91,7 @@ export class GameEngine {
     private items: Item[] = [];
 
     public isPaused: boolean = false;
-    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino';
+    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili';
 
     private score: number = 0;
     private spawnTimer: number = 0;
@@ -101,7 +101,7 @@ export class GameEngine {
     private camY: number = 0;
     private shakeAmount: number = 0;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino', onUpdateUI: (state: any) => void) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -132,6 +132,9 @@ export class GameEngine {
         } else if (this.playerTankType === 'cappucino') {
             // Cappucino Assasino - Medium speed, medium health, very high damage, slow reload
             radius = 24; health = 225; speed = 250; turn = 3.5; turretTurn = 4.5; reload = 2.0; damage = 150; maxAmmo = 40;
+        } else if (this.playerTankType === 'lirili') {
+            // Lirili Larila - Balanced but with a special ability (could be implemented later, for now fast and agile)
+            radius = 19; health = 160; speed = 300; turn = 6.0; turretTurn = 9.0; reload = 0.75; damage = 55; maxAmmo = 70;
         }
 
         this.player = {
@@ -348,9 +351,9 @@ export class GameEngine {
 
         // --- Enemy Spawning ---
         this.spawnTimer -= dt;
-        let maxEnemies = this.score >= 1000 ? 12 : 6;
+        let maxEnemies = 6 + Math.floor(this.score / 1000);
         if (this.spawnTimer <= 0 && this.enemies.length < maxEnemies) {
-            this.spawnTimer = this.score >= 1000 ? 2.0 : 4.0;
+            this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / 1000) * 0.2);
             let angle = Math.random() * Math.PI * 2;
             let dist = Math.max(this.canvas.width, this.canvas.height) + 200;
             

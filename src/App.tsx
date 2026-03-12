@@ -10,7 +10,7 @@ export default function App() {
     const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('login');
     const [username, setUsername] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino'>('medium');
+    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili'>('medium');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
 
     const [totalCoins, setTotalCoins] = useState(0);
@@ -64,7 +64,7 @@ export default function App() {
             return;
         }
         
-        const brainrotTanks = ['67', 'brr', 'tralalero', 'tung', 'cappucino'];
+        const brainrotTanks = ['67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili'];
         const lockedTanks = brainrotTanks.filter(t => !unlockedTanks.includes(t));
         
         if (lockedTanks.length === 0) {
@@ -82,7 +82,8 @@ export default function App() {
             'brr': 'Brr Brr Patapim',
             'tralalero': 'Tralalero Tralala',
             'tung': 'Tung Tung Tung Sahur',
-            'cappucino': 'Cappucino Assasino'
+            'cappucino': 'Cappucino Assasino',
+            'lirili': 'Lirili Larila'
         };
         setChestMessage(`🎉 You unlocked: ${names[randomTank]}! 🎉`);
         setTimeout(() => setChestMessage(null), 5000);
@@ -261,7 +262,8 @@ export default function App() {
                                     { id: 'brr', name: 'Brr Brr Patapim', speed: 'Fast', armor: 'Medium', dmg: 'Rapid Fire', color: 'text-pink-400', border: 'border-pink-500', bg: 'bg-pink-500/20' },
                                     { id: 'tralalero', name: 'Tralalero Tralala', speed: 'Very Slow', armor: 'Godlike', dmg: 'Devastating', color: 'text-fuchsia-400', border: 'border-fuchsia-500', bg: 'bg-fuchsia-500/20' },
                                     { id: 'tung', name: 'Tung Tung Tung Sahur', speed: 'Insane', armor: 'Light', dmg: 'Insane', color: 'text-yellow-400', border: 'border-yellow-500', bg: 'bg-yellow-500/20' },
-                                    { id: 'cappucino', name: 'Cappucino Assasino', speed: 'Fast', armor: 'Medium', dmg: 'Critical', color: 'text-amber-600', border: 'border-amber-700', bg: 'bg-amber-700/20' }
+                                    { id: 'cappucino', name: 'Cappucino Assasino', speed: 'Fast', armor: 'Medium', dmg: 'Critical', color: 'text-amber-600', border: 'border-amber-700', bg: 'bg-amber-700/20' },
+                                    { id: 'lirili', name: 'Lirili Larila', speed: 'Very Fast', armor: 'Medium', dmg: 'High', color: 'text-cyan-400', border: 'border-cyan-500', bg: 'bg-cyan-500/20' }
                                 ].filter(t => unlockedTanks.includes(t.id)).map(t => (
                                     <div
                                         key={t.id}
