@@ -109,11 +109,11 @@ export default function App() {
         setUnlockedTanks(prev => [...prev, randomTank]);
         
         const names: Record<string, string> = {
-            '67': '67 Tankı',
-            'brr': 'Brr Brr Patapim',
+            '67': '67 Tank',
+            'brr': 'Brr Brr Blast',
             'tralalero': 'Tralalero Tralala',
-            'tung': 'Tung Tung Tung Sahur',
-            'cappucino': 'Cappucino Assasino',
+            'tung': 'Tung Tung Midnight',
+            'cappucino': 'Cappuccino Assassin',
             'lirili': 'Lirili Larila'
         };
         setChestMessage(`🎉 You unlocked: ${names[randomTank]}! 🎉`);
@@ -133,8 +133,8 @@ export default function App() {
             setUnlockedTanks(prev => [...prev, tank]);
         }
         const names: Record<string, string> = {
-            'secret': 'Gizli Tank',
-            'shitty': 'Boktan Tank'
+            'secret': 'Secret Tank',
+            'shitty': 'Shitty Tank'
         };
         setChestMessage(`🎉 You unlocked: ${names[tank]}! 🎉`);
         setTimeout(() => setChestMessage(null), 5000);
@@ -154,7 +154,7 @@ export default function App() {
         }
         const names: Record<string, string> = {
             'op_tank': 'Top Secret OP Tank',
-            'shitty': 'Boktan Tank'
+            'shitty': 'Shitty Tank'
         };
         setChestMessage(isOP ? `🔥 HOLY SHIT! You unlocked: ${names[tank]}! 🔥` : `💀 Ouch... You got a ${names[tank]}. 💀`);
         setTimeout(() => setChestMessage(null), 5000);
@@ -184,18 +184,18 @@ export default function App() {
     ];
 
     const brainrotStats = [
-        { id: '67', name: '67 Tankı', desc: 'Zonguldak Power', hp: 270, speed: 315, armor: 'High', dmg: 108 },
-        { id: 'brr', name: 'Brr Brr', desc: 'Patapim Patapam', hp: 225, speed: 360, armor: 'Medium', dmg: 22 },
+        { id: '67', name: '67 Tank', desc: 'Industrial Power', hp: 270, speed: 315, armor: 'High', dmg: 108 },
+        { id: 'brr', name: 'Brr Brr', desc: 'Blast Wave', hp: 225, speed: 360, armor: 'Medium', dmg: 22 },
         { id: 'tralalero', name: 'Tralalero', desc: 'Tralala', hp: 720, speed: 162, armor: 'Extreme', dmg: 180 },
-        { id: 'tung', name: 'Tung Tung', desc: 'Sahur Special', hp: 135, speed: 380, armor: 'Low', dmg: 65 },
-        { id: 'cappucino', name: 'Cappucino', desc: 'Assasino', hp: 225, speed: 250, armor: 'Medium', dmg: 150 },
+        { id: 'tung', name: 'Tung Tung', desc: 'Midnight Special', hp: 135, speed: 380, armor: 'Low', dmg: 65 },
+        { id: 'cappucino', name: 'Cappuccino', desc: 'Assassin', hp: 225, speed: 250, armor: 'Medium', dmg: 150 },
         { id: 'lirili', name: 'Lirili', desc: 'Larila', hp: 160, speed: 300, armor: 'Medium', dmg: 55 },
     ];
 
     const opStats = [
         { id: 'op_tank', name: 'Top Secret OP Tank', desc: 'INSANE POWER', hp: 2000, speed: 600, armor: 'Godlike', dmg: 100 },
-        { id: 'secret', name: 'Gizli Tank', desc: 'Special Ops', hp: 700, speed: 450, armor: 'High', dmg: 30 },
-        { id: 'shitty', name: 'Boktan Tank', desc: 'Literal Trash', hp: 50, speed: 150, armor: 'None', dmg: 10 },
+        { id: 'secret', name: 'Secret Tank', desc: 'Special Ops', hp: 700, speed: 450, armor: 'High', dmg: 30 },
+        { id: 'shitty', name: 'Shitty Tank', desc: 'Literal Trash', hp: 50, speed: 150, armor: 'None', dmg: 10 },
     ];
 
     return (
@@ -207,7 +207,7 @@ export default function App() {
                             <div className="inline-flex p-4 bg-emerald-500/10 rounded-2xl mb-4">
                                 <Target className="w-12 h-12 text-emerald-500" />
                             </div>
-                            <h1 className="text-4xl font-black uppercase tracking-tighter mb-2">Steel Vanguard</h1>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter mb-2">Tank Fight</h1>
                             <p className="text-neutral-500 text-sm uppercase tracking-widest">War-Torn City Combat</p>
                         </div>
                         
