@@ -70,6 +70,8 @@ export default function App() {
                 totalCoins,
                 unlockedTanks
             }).catch(console.error);
+            
+            set(ref(db, `leaderboard/${username}`), totalCoins).catch(console.error);
         }
     }, [totalCoins, unlockedTanks, username, gameState]);
 
@@ -138,15 +140,6 @@ export default function App() {
                 if (state.health <= 0) {
                     setGameState('gameover');
                     setTotalCoins(prev => prev + state.score);
-                    
-                    // Update leaderboard
-                    const dbRef = ref(db);
-                    get(child(dbRef, `leaderboard/${username}`)).then(snapshot => {
-                        const currentScore = snapshot.exists() ? snapshot.val() : 0;
-                        if (state.score > currentScore) {
-                            set(ref(db, `leaderboard/${username}`), state.score);
-                        }
-                    });
                     
                     engine.stop();
                 }
