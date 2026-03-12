@@ -79,9 +79,6 @@ export class GameEngine {
     private mouseX: number = 0;
     private mouseY: number = 0;
     private isMouseDown: boolean = false;
-    private mobileMovement: { x: number, y: number } = { x: 0, y: 0 };
-    private mobileTurret: { x: number, y: number } = { x: 0, y: 0 };
-    private mobileShoot: boolean = false;
 
     private nextId: number = 1;
     private player!: Tank;
@@ -115,12 +112,6 @@ export class GameEngine {
 
         this.init();
         this.setupInput();
-    }
-
-    public setMobileInput(movement: { x: number, y: number }, turret: { x: number, y: number }, shoot: boolean) {
-        this.mobileMovement = movement;
-        this.mobileTurret = turret;
-        this.mobileShoot = shoot;
     }
 
     private init() {
@@ -281,12 +272,6 @@ export class GameEngine {
         if (this.keys.has('a')) inputX -= 1;
         if (this.keys.has('d')) inputX += 1;
 
-        // Combine keyboard and mobile input
-        inputY += this.mobileMovement.y;
-        inputX += this.mobileMovement.x;
-        inputY = Math.max(-1, Math.min(1, inputY));
-        inputX = Math.max(-1, Math.min(1, inputX));
-
         let currentPlayerMaxSpeed = this.player.maxSpeed * (this.player.speedBuffTimer > 0 ? 1.5 : 1.0);
 
         if (inputY !== 0) {
@@ -305,17 +290,13 @@ export class GameEngine {
         this.camX += (targetCamX - this.camX) * 5 * dt;
         this.camY += (targetCamY - this.camY) * 5 * dt;
 
-        let targetAngle;
-        if (this.mobileTurret.x !== 0 || this.mobileTurret.y !== 0) {
-            targetAngle = Math.atan2(this.mobileTurret.y, this.mobileTurret.x);
-        } else {
-            const mouseWorldX = this.mouseX + this.camX;
-            const mouseWorldY = this.mouseY + this.camY;
-            targetAngle = Math.atan2(mouseWorldY - this.player.y, mouseWorldX - this.player.x);
-        }
+        const mouseWorldX = this.mouseX + this.camX;
+        const mouseWorldY = this.mouseY + this.camY;
+
+        const targetAngle = Math.atan2(mouseWorldY - this.player.y, mouseWorldX - this.player.x);
         this.player.turretAngle = moveTowardsAngle(this.player.turretAngle, targetAngle, this.player.turretTurnSpeed * dt);
 
-        if ((this.isMouseDown || this.mobileShoot) && this.player.reloadTimer <= 0 && this.player.ammo > 0) {
+        if (this.isMouseDown && this.player.reloadTimer <= 0 && this.player.ammo > 0) {
             this.fireProjectile(this.player);
         }
 
@@ -632,7 +613,10 @@ export class GameEngine {
                 this.spawnExplosion(this.enemies[i].x, this.enemies[i].y, '#ef4444', 30);
                 this.shakeAmount = 10; // Screen shake on enemy death
                 this.enemies.splice(i, 1);
-                this.score += 100;
+                let points = 100;
+                if (this.difficulty === 'easy') points = 50;
+                else if (this.difficulty === 'hard') points = 200;
+                this.score += points;
             }
         }
 

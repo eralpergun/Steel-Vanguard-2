@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from './game/Engine';
-import { Crosshair, ShieldAlert, Target, Info } from 'lucide-react';
+import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
 import { ref, get, set, child } from 'firebase/database';
-import { MobileControls } from './components/MobileControls';
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,19 +13,11 @@ export default function App() {
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
-    const [showControls, setShowControls] = useState(false);
 
     const [totalCoins, setTotalCoins] = useState(0);
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
-
-    useEffect(() => {
-        if (gameState === 'playing') {
-            setShowControls(true);
-            setTimeout(() => setShowControls(false), 5000);
-        }
-    }, [gameState]);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
@@ -176,21 +167,7 @@ export default function App() {
     return (
         <div className="relative w-full h-screen bg-neutral-900 overflow-hidden font-sans text-white select-none">
             {gameState === 'playing' && (
-                <>
-                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" />
-                    <MobileControls onInput={(m, t, s) => engineRef.current?.setMobileInput(m, t, s)} />
-                    {showControls && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-50 pointer-events-none">
-                            <div className="bg-black/80 p-8 rounded-2xl border border-white/20 text-center">
-                                <Info className="w-16 h-16 mx-auto text-emerald-400 mb-4" />
-                                <h2 className="text-3xl font-bold text-white mb-4">Mobile Controls</h2>
-                                <p className="text-neutral-300">Left Joystick: Aim Turret</p>
-                                <p className="text-neutral-300">Right Joystick: Move Tank</p>
-                                <p className="text-neutral-300">Red Button: Shoot</p>
-                            </div>
-                        </div>
-                    )}
-                </>
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" />
             )}
 
             {/* UI Overlay */}
@@ -299,9 +276,9 @@ export default function App() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 text-left bg-black/30 p-6 rounded-2xl mb-8 border border-white/5">
-                            <div>
-                                <h3 className="font-bold text-emerald-400 mb-2">Controls</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            <div className="bg-black/40 p-6 rounded-2xl border border-emerald-500/30">
+                                <h3 className="text-xl font-bold text-emerald-400 uppercase tracking-wider mb-4">Controls</h3>
                                 <ul className="text-neutral-300 space-y-2 text-sm">
                                     <li><kbd className="bg-neutral-800 px-2 py-1 rounded">W</kbd> <kbd className="bg-neutral-800 px-2 py-1 rounded">S</kbd> Forward / Reverse</li>
                                     <li><kbd className="bg-neutral-800 px-2 py-1 rounded">A</kbd> <kbd className="bg-neutral-800 px-2 py-1 rounded">D</kbd> Rotate Hull</li>
@@ -310,8 +287,8 @@ export default function App() {
                                     <li><kbd className="bg-neutral-800 px-2 py-1 rounded">ESC</kbd> Pause Game</li>
                                 </ul>
                             </div>
-                            <div>
-                                <h3 className="font-bold text-orange-400 mb-2">Armor Mechanics</h3>
+                            <div className="bg-black/40 p-6 rounded-2xl border border-orange-500/30">
+                                <h3 className="text-xl font-bold text-orange-400 uppercase tracking-wider mb-4">Armor Mechanics</h3>
                                 <ul className="text-neutral-300 space-y-2 text-sm">
                                     <li><span className="text-emerald-400 font-bold">Front:</span> Heavy Armor (Ricochet)</li>
                                     <li><span className="text-yellow-400 font-bold">Sides:</span> Medium Armor (Normal)</li>
