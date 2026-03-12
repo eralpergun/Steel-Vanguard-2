@@ -97,7 +97,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950">
                     <div className="text-center max-w-2xl p-8">
                         <ShieldAlert className="w-24 h-24 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Steel Vanguard</h1>
+                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Steel Vanguard 2</h1>
                         <p className="text-xl text-neutral-400 mb-8">Top-down armored warfare. Angle your hull to bounce shots, flank enemies for critical rear damage.</p>
 
                         <div className="grid grid-cols-2 gap-4 text-left bg-black/30 p-6 rounded-2xl mb-8 border border-white/5">
