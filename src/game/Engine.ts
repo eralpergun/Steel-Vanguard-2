@@ -177,10 +177,10 @@ export class GameEngine {
         this.decorations = [];
         
         // Add streets and blocks
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 200; i++) {
             const isHorizontal = Math.random() > 0.5;
-            const x = Math.random() * 4000 - 2000;
-            const y = Math.random() * 4000 - 2000;
+            const x = Math.random() * 10000 - 5000;
+            const y = Math.random() * 10000 - 5000;
             const w = isHorizontal ? Math.random() * 300 + 100 : Math.random() * 50 + 40;
             const h = isHorizontal ? Math.random() * 50 + 40 : Math.random() * 300 + 100;
             
@@ -191,10 +191,10 @@ export class GameEngine {
         }
 
         // Add decorations (craters and rubble)
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 400; i++) {
             this.decorations.push({
-                x: Math.random() * 5000 - 2500,
-                y: Math.random() * 5000 - 2500,
+                x: Math.random() * 10000 - 5000,
+                y: Math.random() * 10000 - 5000,
                 size: Math.random() * 40 + 10,
                 type: Math.random() > 0.4 ? 'rubble' : 'crater',
                 rotation: Math.random() * Math.PI * 2
@@ -388,9 +388,28 @@ export class GameEngine {
             let enemyDamage = 20 + Math.floor(this.score / scoreInterval) * 5;
             let enemySpeed = 120 + Math.floor(this.score / scoreInterval) * 10;
             let enemyReload = Math.max(2.0, 5 - Math.floor(this.score / scoreInterval) * 0.5);
+            
+            const types = ['scout', 'sniper', 'brawler'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            if (type === 'scout') {
+                enemyHealth *= 0.7;
+                enemySpeed *= 1.5;
+                enemyDamage *= 0.8;
+            } else if (type === 'sniper') {
+                enemyHealth *= 0.8;
+                enemySpeed *= 0.7;
+                enemyDamage *= 2.0;
+                enemyReload *= 2.0;
+            } else if (type === 'brawler') {
+                enemyHealth *= 1.5;
+                enemySpeed *= 0.9;
+                enemyDamage *= 1.2;
+            }
 
             this.enemies.push({
                 id: this.nextId++,
+                type: type,
                 x: this.player.x + Math.cos(angle) * dist,
                 y: this.player.y + Math.sin(angle) * dist,
                 radius: 20,
@@ -404,7 +423,7 @@ export class GameEngine {
                 damage: enemyDamage,
                 ammo: 999, // Enemies have infinite ammo for now
                 maxAmmo: 999,
-                isPlayer: false, color: '#ef4444' // red-500
+                isPlayer: false, color: type === 'scout' ? '#3b82f6' : (type === 'sniper' ? '#f59e0b' : '#ef4444') // blue, amber, red
             });
         }
 
@@ -425,14 +444,38 @@ export class GameEngine {
                 let aiTargetAngle = Math.atan2(this.player.y - tank.y, this.player.x - tank.x);
                 let currentMaxSpeed = tank.maxSpeed * (tank.speedBuffTimer > 0 ? 1.5 : 1.0);
 
-                if (distToPlayer > 400) {
+                // Behavior based on type
+                if (tank.type === 'scout') {
+                    // Flanking behavior
+                    let flankAngle = aiTargetAngle + (Math.random() > 0.5 ? Math.PI / 4 : -Math.PI / 4);
+                    if (distToPlayer > 300) {
+                        tank.hullAngle = moveTowardsAngle(tank.hullAngle, flankAngle, tank.turnSpeed * dt);
+                        tank.speed = currentMaxSpeed;
+                    } else if (distToPlayer < 200) {
+                        tank.hullAngle = moveTowardsAngle(tank.hullAngle, aiTargetAngle + Math.PI, tank.turnSpeed * dt);
+                        tank.speed = -currentMaxSpeed;
+                    } else {
+                        tank.speed = currentMaxSpeed * 0.5;
+                    }
+                } else if (tank.type === 'sniper') {
+                    // Keep distance
+                    if (distToPlayer < 600) {
+                        tank.hullAngle = moveTowardsAngle(tank.hullAngle, aiTargetAngle + Math.PI, tank.turnSpeed * dt);
+                        tank.speed = currentMaxSpeed;
+                    } else if (distToPlayer > 800) {
+                        tank.hullAngle = moveTowardsAngle(tank.hullAngle, aiTargetAngle, tank.turnSpeed * dt);
+                        tank.speed = currentMaxSpeed;
+                    } else {
+                        tank.speed = 0;
+                    }
+                } else { // brawler
+                    // Charge
                     tank.hullAngle = moveTowardsAngle(tank.hullAngle, aiTargetAngle, tank.turnSpeed * dt);
-                    tank.speed = currentMaxSpeed;
-                } else if (distToPlayer < 250) {
-                    tank.hullAngle = moveTowardsAngle(tank.hullAngle, aiTargetAngle, tank.turnSpeed * dt);
-                    tank.speed = -currentMaxSpeed * 0.5;
-                } else {
-                    tank.speed *= 0.9;
+                    if (distToPlayer > 100) {
+                        tank.speed = currentMaxSpeed;
+                    } else {
+                        tank.speed = 0;
+                    }
                 }
 
                 tank.turretAngle = moveTowardsAngle(tank.turretAngle, aiTargetAngle, tank.turretTurnSpeed * dt);
@@ -441,7 +484,7 @@ export class GameEngine {
                 while (aimDiff > Math.PI) aimDiff -= Math.PI * 2;
                 aimDiff = Math.abs(aimDiff);
 
-                if (aimDiff < 0.1 && tank.reloadTimer <= 0 && distToPlayer < 700) {
+                if (aimDiff < 0.1 && tank.reloadTimer <= 0 && distToPlayer < (tank.type === 'sniper' ? 1000 : 500)) {
                     this.fireProjectile(tank);
                 }
             }
