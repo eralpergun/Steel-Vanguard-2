@@ -223,7 +223,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950">
                     <div className="text-center max-w-md p-8 bg-black/40 rounded-3xl border border-white/10 backdrop-blur-md shadow-2xl">
                         <ShieldAlert className="w-20 h-20 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">Tank Fight</h1>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">tankfight</h1>
                         <p className="text-neutral-400 mb-8">Enter your username to load your progress.</p>
                         
                         <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -253,7 +253,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950 overflow-y-auto">
                     <div className="text-center max-w-4xl p-8 my-auto">
                         <ShieldAlert className="w-24 h-24 mx-auto text-emerald-500 mb-6" />
-                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">Tank Fight</h1>
+                        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-white drop-shadow-lg">tankfight</h1>
                         <p className="text-xl text-neutral-400 mb-4">Top-down armored warfare. Angle your hull to bounce shots, flank enemies for critical rear damage.</p>
                         
                         <div className="text-2xl font-mono font-bold text-yellow-400 mb-8 bg-black/40 inline-block px-6 py-2 rounded-full border border-yellow-500/30">
