@@ -94,7 +94,7 @@ export class GameEngine {
 
     private score: number = 0;
     private spawnTimer: number = 0;
-    private itemSpawnTimer: number = 5.0;
+    private itemSpawnTimer: number = 2.0;
 
     constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
@@ -114,7 +114,7 @@ export class GameEngine {
             radius = 16; health = 120; speed = 400; turn = 4.5; turretTurn = 6.0; reload = 0.6; damage = 30; maxAmmo = 80;
         } else if (this.playerTankType === 'heavy') {
             // Buffed Heavy Tank
-            radius = 26; health = 400; speed = 160; turn = 2.0; turretTurn = 3.5; reload = 1.5; damage = 100; maxAmmo = 30;
+            radius = 26; health = 400; speed = 220; turn = 2.0; turretTurn = 3.5; reload = 1.5; damage = 100; maxAmmo = 30;
         }
 
         this.player = {
@@ -262,8 +262,8 @@ export class GameEngine {
 
         // --- Item Spawning ---
         this.itemSpawnTimer -= dt;
-        if (this.itemSpawnTimer <= 0 && this.items.length < 12) {
-            this.itemSpawnTimer = 5.0;
+        if (this.itemSpawnTimer <= 0 && this.items.length < 24) {
+            this.itemSpawnTimer = 2.0;
             let angle = Math.random() * Math.PI * 2;
             let dist = Math.random() * 1000 + 500;
             let rand = Math.random();
@@ -312,11 +312,10 @@ export class GameEngine {
                     });
                     this.items.splice(i, 1);
                 } else if (item.type === 'ammo' && this.player.ammo < this.player.maxAmmo) {
-                    let ammoAmount = Math.ceil(this.player.maxAmmo * 0.5);
-                    this.player.ammo = Math.min(this.player.maxAmmo, this.player.ammo + ammoAmount);
+                    this.player.ammo = this.player.maxAmmo;
                     this.floatingTexts.push({
                         x: this.player.x, y: this.player.y - 30,
-                        text: `+${ammoAmount} AMMO`,
+                        text: `FULL AMMO`,
                         life: 1.5, maxLife: 1.5,
                         color: "#f59e0b"
                     });
