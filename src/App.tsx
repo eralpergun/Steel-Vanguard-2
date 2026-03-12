@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from './game/Engine';
-import { Crosshair, ShieldAlert, Target } from 'lucide-react';
+import { Crosshair, ShieldAlert, Target, Info } from 'lucide-react';
 import { db } from './firebase';
 import { ref, get, set, child } from 'firebase/database';
+import { MobileControls } from './components/MobileControls';
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -13,11 +14,19 @@ export default function App() {
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
+    const [showControls, setShowControls] = useState(false);
 
     const [totalCoins, setTotalCoins] = useState(0);
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
+
+    useEffect(() => {
+        if (gameState === 'playing') {
+            setShowControls(true);
+            setTimeout(() => setShowControls(false), 5000);
+        }
+    }, [gameState]);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
@@ -167,7 +176,21 @@ export default function App() {
     return (
         <div className="relative w-full h-screen bg-neutral-900 overflow-hidden font-sans text-white select-none">
             {gameState === 'playing' && (
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" />
+                <>
+                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" />
+                    <MobileControls onInput={(m, t, s) => engineRef.current?.setMobileInput(m, t, s)} />
+                    {showControls && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-50 pointer-events-none">
+                            <div className="bg-black/80 p-8 rounded-2xl border border-white/20 text-center">
+                                <Info className="w-16 h-16 mx-auto text-emerald-400 mb-4" />
+                                <h2 className="text-3xl font-bold text-white mb-4">Mobile Controls</h2>
+                                <p className="text-neutral-300">Left Joystick: Aim Turret</p>
+                                <p className="text-neutral-300">Right Joystick: Move Tank</p>
+                                <p className="text-neutral-300">Red Button: Shoot</p>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* UI Overlay */}
