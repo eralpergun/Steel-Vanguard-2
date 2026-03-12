@@ -24,32 +24,20 @@ export default function App() {
         setIsLoggingIn(true);
         try {
             const dbRef = ref(db);
-            const isAdmin = username.toLowerCase() === 'eralpergun';
-            const allTanks = ['light', 'medium', 'heavy', '67', 'brr', 'tralalero'];
             
-            if (isAdmin) {
-                // Admin override
-                await set(ref(db, `users/${username}`), {
-                    totalCoins: 999999999,
-                    unlockedTanks: allTanks
-                });
-                setTotalCoins(999999999);
-                setUnlockedTanks(allTanks);
+            const snapshot = await get(child(dbRef, `users/${username}`));
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                setTotalCoins(data.totalCoins || 0);
+                setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
             } else {
-                const snapshot = await get(child(dbRef, `users/${username}`));
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    setTotalCoins(data.totalCoins || 0);
-                    setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
-                } else {
-                    // Initialize new user
-                    await set(ref(db, `users/${username}`), {
-                        totalCoins: 0,
-                        unlockedTanks: ['light', 'medium', 'heavy']
-                    });
-                    setTotalCoins(0);
-                    setUnlockedTanks(['light', 'medium', 'heavy']);
-                }
+                // Initialize new user
+                await set(ref(db, `users/${username}`), {
+                    totalCoins: 0,
+                    unlockedTanks: ['light', 'medium', 'heavy']
+                });
+                setTotalCoins(0);
+                setUnlockedTanks(['light', 'medium', 'heavy']);
             }
             setGameState('menu');
         } catch (error) {
