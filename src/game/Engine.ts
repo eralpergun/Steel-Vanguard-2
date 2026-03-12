@@ -112,20 +112,20 @@ export class GameEngine {
     }
 
     private init() {
-        // Buffed Medium Tank (Default)
-        let radius = 20, health = 200, speed = 250, turn = 3.0, turretTurn = 5.0, reload = 1.0, damage = 50, maxAmmo = 50;
+        // Balanced Medium Tank (Default)
+        let radius = 20, health = 180, speed = 225, turn = 3.0, turretTurn = 5.0, reload = 1.1, damage = 45, maxAmmo = 50;
         if (this.playerTankType === 'light') {
-            // Buffed Light Tank
-            radius = 16; health = 120; speed = 400; turn = 4.5; turretTurn = 6.0; reload = 0.6; damage = 30; maxAmmo = 80;
+            // Balanced Light Tank
+            radius = 16; health = 108; speed = 360; turn = 4.5; turretTurn = 6.0; reload = 0.66; damage = 27; maxAmmo = 80;
         } else if (this.playerTankType === 'heavy') {
-            // Buffed Heavy Tank
-            radius = 26; health = 400; speed = 220; turn = 2.0; turretTurn = 3.5; reload = 1.5; damage = 100; maxAmmo = 30;
+            // Balanced Heavy Tank
+            radius = 26; health = 360; speed = 198; turn = 2.0; turretTurn = 3.5; reload = 1.65; damage = 90; maxAmmo = 30;
         } else if (this.playerTankType === '67') {
-            radius = 22; health = 300; speed = 350; turn = 4.0; turretTurn = 6.0; reload = 0.8; damage = 120; maxAmmo = 100;
+            radius = 22; health = 270; speed = 315; turn = 4.0; turretTurn = 6.0; reload = 0.88; damage = 108; maxAmmo = 100;
         } else if (this.playerTankType === 'brr') {
-            radius = 18; health = 250; speed = 400; turn = 5.0; turretTurn = 8.0; reload = 0.2; damage = 25; maxAmmo = 200;
+            radius = 18; health = 225; speed = 360; turn = 5.0; turretTurn = 8.0; reload = 0.22; damage = 22; maxAmmo = 200;
         } else if (this.playerTankType === 'tralalero') {
-            radius = 30; health = 800; speed = 180; turn = 2.5; turretTurn = 4.0; reload = 1.0; damage = 200; maxAmmo = 50;
+            radius = 30; health = 720; speed = 162; turn = 2.5; turretTurn = 4.0; reload = 1.1; damage = 180; maxAmmo = 50;
         }
 
         this.player = {
