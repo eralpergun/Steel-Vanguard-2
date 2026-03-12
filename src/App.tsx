@@ -1,28 +1,60 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from './game/Engine';
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
+import { db } from './firebase';
+import { ref, get, set, child } from 'firebase/database';
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<GameEngine | null>(null);
-    const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameover'>('menu');
+    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('login');
+    const [username, setUsername] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero'>('medium');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
 
-    const [totalCoins, setTotalCoins] = useState(() => parseInt(localStorage.getItem('totalCoins') || '0'));
-    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(() => {
-        const saved = localStorage.getItem('unlockedTanks');
-        return saved ? JSON.parse(saved) : ['light', 'medium', 'heavy'];
-    });
+    const [totalCoins, setTotalCoins] = useState(0);
+    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
     const [chestMessage, setChestMessage] = useState<string | null>(null);
 
-    useEffect(() => {
-        localStorage.setItem('totalCoins', totalCoins.toString());
-    }, [totalCoins]);
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!username.trim()) return;
+        
+        setIsLoggingIn(true);
+        try {
+            const dbRef = ref(db);
+            const snapshot = await get(child(dbRef, `users/${username}`));
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                setTotalCoins(data.totalCoins || 0);
+                setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
+            } else {
+                // Initialize new user
+                await set(ref(db, `users/${username}`), {
+                    totalCoins: 0,
+                    unlockedTanks: ['light', 'medium', 'heavy']
+                });
+                setTotalCoins(0);
+                setUnlockedTanks(['light', 'medium', 'heavy']);
+            }
+            setGameState('menu');
+        } catch (error) {
+            console.error("Firebase login error:", error);
+            alert("Failed to connect to database.");
+        } finally {
+            setIsLoggingIn(false);
+        }
+    };
 
     useEffect(() => {
-        localStorage.setItem('unlockedTanks', JSON.stringify(unlockedTanks));
-    }, [unlockedTanks]);
+        if (gameState !== 'login' && username) {
+            set(ref(db, `users/${username}`), {
+                totalCoins,
+                unlockedTanks
+            }).catch(console.error);
+        }
+    }, [totalCoins, unlockedTanks, username, gameState]);
 
     const buyChest = () => {
         if (totalCoins < 3000) {
@@ -133,6 +165,36 @@ export default function App() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Login Screen */}
+            {gameState === 'login' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800 to-neutral-950">
+                    <div className="text-center max-w-md p-8 bg-black/40 rounded-3xl border border-white/10 backdrop-blur-md shadow-2xl">
+                        <ShieldAlert className="w-20 h-20 mx-auto text-emerald-500 mb-6" />
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 text-white drop-shadow-lg">Steel Vanguard 2</h1>
+                        <p className="text-neutral-400 mb-8">Enter your username to load your progress.</p>
+                        
+                        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                            <input 
+                                type="text" 
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Username" 
+                                className="px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white focus:outline-none focus:border-emerald-500 transition-colors text-center text-lg font-bold"
+                                required
+                                disabled={isLoggingIn}
+                            />
+                            <button 
+                                type="submit"
+                                disabled={isLoggingIn || !username.trim()}
+                                className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white font-bold text-lg py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(5,150,105,0.3)]"
+                            >
+                                {isLoggingIn ? 'CONNECTING...' : 'LOGIN'}
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
