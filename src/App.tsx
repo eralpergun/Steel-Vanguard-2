@@ -76,8 +76,8 @@ export default function App() {
     }, [totalCoins, unlockedTanks, username, gameState]);
 
     const buyChest = () => {
-        if (totalCoins < 3000) {
-            setChestMessage("Not enough points! You need 3000.");
+        if (totalCoins < 5000) {
+            setChestMessage("Not enough points! You need 5000.");
             setTimeout(() => setChestMessage(null), 3000);
             return;
         }
@@ -91,7 +91,7 @@ export default function App() {
             return;
         }
 
-        setTotalCoins(prev => prev - 3000);
+        setTotalCoins(prev => prev - 5000);
         const randomTank = lockedTanks[Math.floor(Math.random() * lockedTanks.length)];
         setUnlockedTanks(prev => [...prev, randomTank]);
         
@@ -288,7 +288,7 @@ export default function App() {
                                     onClick={buyChest}
                                     className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-6 rounded-lg transition-all shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2"
                                 >
-                                    <span>🎁 Buy Brainrot Chest (3000 pts)</span>
+                                    <span>🎁 Buy Brainrot Chest (5000 pts)</span>
                                 </button>
                                 <button 
                                     onClick={buySecretTank}
