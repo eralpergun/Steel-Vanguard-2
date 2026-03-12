@@ -386,7 +386,7 @@ export class GameEngine {
             // Harder enemies
             let enemyHealth = 50 + Math.floor(this.score / scoreInterval) * 20;
             let enemyDamage = 20 + Math.floor(this.score / scoreInterval) * 5;
-            let enemySpeed = 120 + Math.floor(this.score / scoreInterval) * 10;
+            let enemySpeed = (120 + Math.floor(this.score / scoreInterval) * 10) * 1.5;
             let enemyReload = Math.max(2.0, 5 - Math.floor(this.score / scoreInterval) * 0.5);
             
             const types = ['scout', 'sniper', 'brawler'];
