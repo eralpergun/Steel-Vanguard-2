@@ -387,7 +387,8 @@ export class GameEngine {
         if (this.keys.has('a')) inputX -= 1;
         if (this.keys.has('d')) inputX += 1;
 
-        let currentPlayerMaxSpeed = this.player.maxSpeed * (this.player.speedBuffTimer > 0 ? 1.5 : 1.0);
+        let playerHealthFactor = Math.max(0.4, this.player.health / this.player.maxHealth);
+        let currentPlayerMaxSpeed = this.player.maxSpeed * (this.player.speedBuffTimer > 0 ? 1.5 : 1.0) * playerHealthFactor;
 
         if (inputY !== 0) {
             this.player.speed = currentPlayerMaxSpeed * inputY;
@@ -622,7 +623,8 @@ export class GameEngine {
             if (!tank.isPlayer) {
                 let distToPlayer = new Vec2(this.player.x - tank.x, this.player.y - tank.y).mag();
                 let aiTargetAngle = Math.atan2(this.player.y - tank.y, this.player.x - tank.x);
-                let currentMaxSpeed = tank.maxSpeed * (tank.speedBuffTimer > 0 ? 1.5 : 1.0);
+                let healthFactor = Math.max(0.4, tank.health / tank.maxHealth);
+                let currentMaxSpeed = tank.maxSpeed * (tank.speedBuffTimer > 0 ? 1.5 : 1.0) * healthFactor;
 
                 // Behavior based on type
                 if (tank.type === 'scout') {
@@ -869,12 +871,14 @@ export class GameEngine {
         let px = tank.x + Math.cos(angle) * barrelLength;
         let py = tank.y + Math.sin(angle) * barrelLength;
 
+        let healthFactor = Math.max(0.4, tank.health / tank.maxHealth);
+
         this.projectiles.push({
             x: px, y: py,
             vx: Math.cos(angle) * 1500,
             vy: Math.sin(angle) * 1500,
             radius: 2,
-            damage: tank.damage * 0.15,
+            damage: tank.damage * 0.15 * healthFactor,
             ownerId: tank.id,
             life: 0.8,
             trail: []
@@ -890,12 +894,14 @@ export class GameEngine {
         let px = tank.x + Math.cos(tank.turretAngle) * barrelLength;
         let py = tank.y + Math.sin(tank.turretAngle) * barrelLength;
 
+        let healthFactor = Math.max(0.4, tank.health / tank.maxHealth);
+
         this.projectiles.push({
             x: px, y: py,
             vx: Math.cos(tank.turretAngle) * 1000,
             vy: Math.sin(tank.turretAngle) * 1000,
             radius: 4,
-            damage: tank.damage,
+            damage: tank.damage * healthFactor,
             ownerId: tank.id,
             life: 2.0,
             trail: []
