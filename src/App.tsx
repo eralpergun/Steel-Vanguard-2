@@ -203,6 +203,9 @@ export default function App() {
         { id: 'shitty', name: 'Shitty Tank', desc: 'Literal Trash', hp: 50, speed: 150, armor: 'None', dmg: 10 },
     ];
 
+    const allTanks = [...tankStats, ...brainrotStats, ...opStats];
+    const currentTankStats = allTanks.find(t => t.id === selectedTank);
+
     return (
         <div className="min-h-screen bg-neutral-950 text-white overflow-hidden font-sans selection:bg-emerald-500/30">
             {gameState === 'login' && (
@@ -381,6 +384,56 @@ export default function App() {
                             </div>
 
                             <div className="space-y-8">
+                                {/* Stats Panel */}
+                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8 sticky top-8">
+                                    <h3 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-3">
+                                        <Crosshair className="w-5 h-5 text-emerald-500" />
+                                        Vehicle Specs
+                                    </h3>
+                                    
+                                    {currentTankStats && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">Selected Model</p>
+                                                <p className="text-2xl font-bold text-white">{currentTankStats.name}</p>
+                                                <p className="text-sm text-emerald-500 font-mono mt-1">{currentTankStats.desc}</p>
+                                            </div>
+
+                                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                                <div>
+                                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest mb-2">
+                                                        <span className="text-neutral-400">Hull Integrity (HP)</span>
+                                                        <span className="text-white">{currentTankStats.hp}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-neutral-950 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, (currentTankStats.hp / 2000) * 100)}%` }} />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest mb-2">
+                                                        <span className="text-neutral-400">Top Speed</span>
+                                                        <span className="text-white">{currentTankStats.speed}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-neutral-950 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (currentTankStats.speed / 600) * 100)}%` }} />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest mb-2">
+                                                        <span className="text-neutral-400">Firepower (DMG)</span>
+                                                        <span className="text-white">{currentTankStats.dmg}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-neutral-950 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-red-500" style={{ width: `${Math.min(100, (currentTankStats.dmg / 180) * 100)}%` }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </section>
+
                                 <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
                                     <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">Leaderboard</h3>
                                     <div className="space-y-4">

@@ -223,8 +223,8 @@ export class GameEngine {
         this.bgCanvas.height = 1024;
         this.bgCtx = this.bgCanvas.getContext('2d')!;
         
-        // Fill base dark asphalt
-        this.bgCtx.fillStyle = '#1a1a1a'; // dark asphalt
+        // Fill base solid grass green
+        this.bgCtx.fillStyle = '#3f6212'; // lime-900 (dark realistic grass)
         this.bgCtx.fillRect(0, 0, 1024, 1024);
         
         // Add subtle noise for realism
@@ -238,11 +238,11 @@ export class GameEngine {
             this.bgCtx.fillRect(x, y, size, size);
         }
         
-        // Add subtle larger cracks/stains
+        // Add subtle larger grass variations
         for (let i = 0; i < 50; i++) {
             this.bgCtx.beginPath();
             this.bgCtx.arc(Math.random() * 1024, Math.random() * 1024, Math.random() * 30 + 10, 0, Math.PI * 2);
-            this.bgCtx.fillStyle = `rgba(0, 0, 0, ${Math.random() * 0.1})`;
+            this.bgCtx.fillStyle = `rgba(77, 124, 15, ${Math.random() * 0.1})`; // lime-700
             this.bgCtx.fill();
         }
         
@@ -945,7 +945,7 @@ export class GameEngine {
             this.ctx.fillRect(-1024, -1024, this.canvas.width + 2048, this.canvas.height + 2048);
             this.ctx.restore();
         } else {
-            this.ctx.fillStyle = '#1a1a1a'; 
+            this.ctx.fillStyle = '#3f6212'; 
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
@@ -1038,7 +1038,7 @@ export class GameEngine {
         const gridSize = 200;
         const offsetX = -this.camX % gridSize;
         const offsetY = -this.camY % gridSize;
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         for (let x = offsetX - gridSize; x < this.canvas.width + gridSize; x += gridSize) {
@@ -1226,6 +1226,16 @@ export class GameEngine {
         }
 
         this.ctx.restore();
+
+        // Draw Vignette Effect
+        const gradient = this.ctx.createRadialGradient(
+            this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.4,
+            this.canvas.width / 2, this.canvas.height / 2, this.canvas.height * 0.8
+        );
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0.6)');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     private drawPlane(x: number, y: number, angle: number) {
