@@ -100,14 +100,22 @@ export class GameEngine {
     private spawnTimer: number = 0;
     private itemSpawnTimer: number = 2.0;
     private airstrikeCooldown: number = 0;
-    private airstrikes: {targetId: number, x: number, y: number, timer: number}[] = [];
+    private airstrikes: {targetId: number, x: number, y: number, timer: number, angle: number}[] = [];
+    private planes: {x: number, y: number, angle: number, speed: number, life: number}[] = [];
     private mgReloadTimer: number = 0;
+
+    private trees: {x: number, y: number, size: number, type: number}[] = [];
+    private bgCanvas!: HTMLCanvasElement;
+    private bgCtx!: CanvasRenderingContext2D;
 
     private camX: number = 0;
     private camY: number = 0;
     private shakeAmount: number = 0;
 
     private difficulty: 'easy' | 'normal' | 'hard';
+
+    private textures: Record<string, HTMLImageElement> = {};
+    private texturesLoaded: boolean = false;
 
     constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void) {
         this.canvas = canvas;
@@ -116,8 +124,36 @@ export class GameEngine {
         this.difficulty = difficulty;
         this.onUpdateUI = onUpdateUI;
 
+        this.loadTextures();
         this.init();
         this.setupInput();
+    }
+
+    private loadTextures() {
+        const urls: Record<string, string> = {
+            ruin0: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Ruined_buildings_in_Kabul.jpg/400px-Ruined_buildings_in_Kabul.jpg',
+            ruin1: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Ruined_house_in_Agdam.jpg/400px-Ruined_house_in_Agdam.jpg',
+            ruin2: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Ruined_house_in_the_village_of_Kopachi.jpg/400px-Ruined_house_in_the_village_of_Kopachi.jpg',
+            dead_tank0: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Destroyed_Iraqi_Type_69_tank.jpg/300px-Destroyed_Iraqi_Type_69_tank.jpg',
+            dead_tank1: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Destroyed_T-72_tank_in_Tskhinvali.jpg/300px-Destroyed_T-72_tank_in_Tskhinvali.jpg',
+            crater: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Lochnagar_Crater.jpg/300px-Lochnagar_Crater.jpg'
+        };
+
+        let loadedCount = 0;
+        const total = Object.keys(urls).length;
+
+        for (const [key, url] of Object.entries(urls)) {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = url;
+            img.onload = () => {
+                loadedCount++;
+                if (loadedCount === total) {
+                    this.texturesLoaded = true;
+                }
+            };
+            this.textures[key] = img;
+        }
     }
 
     private init() {
@@ -181,6 +217,57 @@ export class GameEngine {
         this.camX = this.player.x;
         this.camY = this.player.y;
 
+        // Generate procedural background
+        this.bgCanvas = document.createElement('canvas');
+        this.bgCanvas.width = 1024;
+        this.bgCanvas.height = 1024;
+        this.bgCtx = this.bgCanvas.getContext('2d')!;
+        
+        // Fill base dark asphalt
+        this.bgCtx.fillStyle = '#1a1a1a'; // dark asphalt
+        this.bgCtx.fillRect(0, 0, 1024, 1024);
+        
+        // Add subtle noise for realism
+        for (let i = 0; i < 50000; i++) {
+            const x = Math.random() * 1024;
+            const y = Math.random() * 1024;
+            const size = Math.random() * 2 + 1;
+            const shade = Math.random() > 0.5 ? 255 : 0;
+            const alpha = Math.random() * 0.03;
+            this.bgCtx.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${alpha})`;
+            this.bgCtx.fillRect(x, y, size, size);
+        }
+        
+        // Add subtle larger cracks/stains
+        for (let i = 0; i < 50; i++) {
+            this.bgCtx.beginPath();
+            this.bgCtx.arc(Math.random() * 1024, Math.random() * 1024, Math.random() * 30 + 10, 0, Math.PI * 2);
+            this.bgCtx.fillStyle = `rgba(0, 0, 0, ${Math.random() * 0.1})`;
+            this.bgCtx.fill();
+        }
+        
+        // Add skid marks
+        for (let i = 0; i < 30; i++) {
+            this.bgCtx.beginPath();
+            const sx = Math.random() * 1024;
+            const sy = Math.random() * 1024;
+            const angle = Math.random() * Math.PI * 2;
+            const length = Math.random() * 100 + 50;
+            this.bgCtx.moveTo(sx, sy);
+            this.bgCtx.lineTo(sx + Math.cos(angle) * length, sy + Math.sin(angle) * length);
+            this.bgCtx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+            this.bgCtx.lineWidth = Math.random() * 4 + 2;
+            this.bgCtx.stroke();
+            
+            // Parallel track
+            this.bgCtx.beginPath();
+            const px = sx + Math.cos(angle + Math.PI/2) * 10;
+            const py = sy + Math.sin(angle + Math.PI/2) * 10;
+            this.bgCtx.moveTo(px, py);
+            this.bgCtx.lineTo(px + Math.cos(angle) * length, py + Math.sin(angle) * length);
+            this.bgCtx.stroke();
+        }
+
         // Generate a war-torn city layout
         this.obstacles = [];
         this.decorations = [];
@@ -207,6 +294,17 @@ export class GameEngine {
                 size: Math.random() * 40 + 10,
                 type: Math.random() > 0.4 ? 'rubble' : 'crater',
                 rotation: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Add trees
+        this.trees = [];
+        for (let i = 0; i < 300; i++) {
+            this.trees.push({
+                x: Math.random() * 10000 - 5000,
+                y: Math.random() * 10000 - 5000,
+                size: Math.random() * 20 + 15,
+                type: Math.floor(Math.random() * 3)
             });
         }
     }
@@ -336,7 +434,8 @@ export class GameEngine {
             
             if (nearestEnemy) {
                 this.airstrikeCooldown = 30;
-                this.airstrikes.push({targetId: nearestEnemy.id, x: nearestEnemy.x, y: nearestEnemy.y, timer: 2.0});
+                let angle = Math.random() * Math.PI * 2;
+                this.airstrikes.push({targetId: nearestEnemy.id, x: nearestEnemy.x, y: nearestEnemy.y, timer: 2.0, angle: angle});
                 this.floatingTexts.push({
                     x: nearestEnemy.x, y: nearestEnemy.y,
                     text: "AIRSTRIKE INBOUND",
@@ -361,6 +460,15 @@ export class GameEngine {
                 this.spawnExplosion(strike.x, strike.y, '#ef4444', 100);
                 this.shakeAmount = 30;
                 
+                // Plane continues flying after dropping bomb
+                this.planes.push({
+                    x: strike.x, 
+                    y: strike.y, 
+                    angle: strike.angle, 
+                    speed: 1500, // Speed of the plane
+                    life: 2.0
+                });
+
                 for (let enemy of this.enemies) {
                     let dist = new Vec2(strike.x - enemy.x, strike.y - enemy.y).mag();
                     if (dist < 200) {
@@ -665,6 +773,13 @@ export class GameEngine {
         }
 
         // --- Update Particles & Texts ---
+        for (let i = this.planes.length - 1; i >= 0; i--) {
+            let p = this.planes[i];
+            p.x += Math.cos(p.angle) * p.speed * dt;
+            p.y += Math.sin(p.angle) * p.speed * dt;
+            p.life -= dt;
+            if (p.life <= 0) this.planes.splice(i, 1);
+        }
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             p.x += p.vx * dt;
@@ -805,13 +920,34 @@ export class GameEngine {
                 color: color,
                 size: Math.random() * 6 + 2
             });
+            // Add smoke
+            if (Math.random() > 0.5) {
+                this.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed * 0.5,
+                    vy: Math.sin(angle) * speed * 0.5,
+                    life: Math.random() * 0.5 + 0.2,
+                    maxLife: 0.7,
+                    color: 'rgba(50, 50, 50, 0.5)',
+                    size: Math.random() * 8 + 4
+                });
+            }
         }
     }
 
     private draw() {
-        // Background - Cracked asphalt / concrete color
-        this.ctx.fillStyle = '#1a1a1a'; 
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Background - Procedural terrain
+        const bgPattern = this.ctx.createPattern(this.bgCanvas, 'repeat');
+        if (bgPattern) {
+            this.ctx.save();
+            this.ctx.fillStyle = bgPattern;
+            this.ctx.translate(-this.camX % 1024, -this.camY % 1024);
+            this.ctx.fillRect(-1024, -1024, this.canvas.width + 2048, this.canvas.height + 2048);
+            this.ctx.restore();
+        } else {
+            this.ctx.fillStyle = '#1a1a1a'; 
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
 
         this.ctx.save();
         
@@ -832,40 +968,62 @@ export class GameEngine {
             this.ctx.rotate(dec.rotation);
             
             if (dec.type === 'crater') {
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                this.ctx.beginPath();
-                this.ctx.ellipse(0, 0, dec.size, dec.size * 0.7, 0, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-                this.ctx.stroke();
+                const tex = this.textures['crater'];
+                if (tex && tex.complete && tex.naturalWidth > 0) {
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 0, dec.size, dec.size * 0.7, 0, 0, Math.PI * 2);
+                    this.ctx.clip();
+                    this.ctx.drawImage(tex, -dec.size, -dec.size, dec.size * 2, dec.size * 2);
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // Blend with dark ground
+                    this.ctx.fill();
+                } else {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 0, dec.size, dec.size * 0.7, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                    this.ctx.stroke();
+                }
             } else if (dec.type === 'dead_tank') {
-                // Draw destroyed hull
-                this.ctx.fillStyle = dec.color || '#333';
-                this.ctx.beginPath();
-                this.ctx.roundRect(-dec.size, -dec.size * 0.8, dec.size * 2, dec.size * 1.6, 4);
-                this.ctx.fill();
-                this.ctx.strokeStyle = '#111';
-                this.ctx.lineWidth = 2;
-                this.ctx.stroke();
+                const seed = Math.floor(Math.abs(dec.x + dec.y)) % 2;
+                const tex = this.textures[`dead_tank${seed}`];
                 
-                // Draw broken turret
-                this.ctx.beginPath();
-                this.ctx.arc(0, 0, dec.size * 0.5, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                // Draw bent barrel
-                this.ctx.beginPath();
-                this.ctx.moveTo(0, 0);
-                this.ctx.lineTo(dec.size * 1.2, dec.size * 0.3); // slightly bent
-                this.ctx.lineWidth = 4;
-                this.ctx.stroke();
-                
-                // Add some scorch marks
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                this.ctx.beginPath();
-                this.ctx.arc(dec.size * 0.3, -dec.size * 0.2, dec.size * 0.4, 0, Math.PI * 2);
-                this.ctx.fill();
+                if (tex && tex.complete && tex.naturalWidth > 0) {
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(-dec.size*1.2, -dec.size, dec.size * 2.4, dec.size * 2, 8);
+                    this.ctx.clip();
+                    this.ctx.drawImage(tex, -dec.size*1.2, -dec.size, dec.size * 2.4, dec.size * 2);
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Blend with dark ground
+                    this.ctx.fill();
+                } else {
+                    // Draw destroyed hull
+                    this.ctx.fillStyle = dec.color || '#333';
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(-dec.size, -dec.size * 0.8, dec.size * 2, dec.size * 1.6, 4);
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#111';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Draw broken turret
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, dec.size * 0.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+                    
+                    // Draw bent barrel
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(dec.size * 1.2, dec.size * 0.3); // slightly bent
+                    this.ctx.lineWidth = 4;
+                    this.ctx.stroke();
+                    
+                    // Add some scorch marks
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(dec.size * 0.3, -dec.size * 0.2, dec.size * 0.4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
             } else {
                 // Rubble
                 this.ctx.fillStyle = '#404040';
@@ -880,7 +1038,7 @@ export class GameEngine {
         const gridSize = 200;
         const offsetX = -this.camX % gridSize;
         const offsetY = -this.camY % gridSize;
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         for (let x = offsetX - gridSize; x < this.canvas.width + gridSize; x += gridSize) {
@@ -971,6 +1129,39 @@ export class GameEngine {
             this.drawTank(tank);
         }
 
+        // Draw Trees
+        for (let tree of this.trees) {
+            this.ctx.save();
+            this.ctx.translate(tree.x, tree.y);
+            
+            // Tree shadow
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            this.ctx.beginPath();
+            this.ctx.arc(tree.size * 0.3, tree.size * 0.3, tree.size, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Tree leaves
+            if (tree.type === 0) {
+                this.ctx.fillStyle = '#14532d'; // green-900
+            } else if (tree.type === 1) {
+                this.ctx.fillStyle = '#064e3b'; // emerald-900
+            } else {
+                this.ctx.fillStyle = '#3f6212'; // lime-900
+            }
+            
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, tree.size, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Tree highlights
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            this.ctx.beginPath();
+            this.ctx.arc(-tree.size * 0.2, -tree.size * 0.2, tree.size * 0.6, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.restore();
+        }
+
         // Draw Projectiles
         for (let p of this.projectiles) {
             // Draw trail
@@ -980,10 +1171,13 @@ export class GameEngine {
                 for (let i = 1; i < p.trail.length; i++) {
                     this.ctx.lineTo(p.trail[i].x, p.trail[i].y);
                 }
-                this.ctx.strokeStyle = 'rgba(253, 224, 71, 0.4)'; // yellow-300 with alpha
+                this.ctx.strokeStyle = 'rgba(253, 224, 71, 0.6)'; // yellow-300 with alpha
                 this.ctx.lineWidth = p.radius * 1.5;
                 this.ctx.lineCap = 'round';
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowColor = '#fde047';
                 this.ctx.stroke();
+                this.ctx.shadowBlur = 0;
             }
 
             // Draw projectile head
@@ -1020,58 +1214,142 @@ export class GameEngine {
         }
         this.ctx.globalAlpha = 1.0;
 
+        // Draw Planes
+        for (let strike of this.airstrikes) {
+            // Plane approaches target over 2 seconds
+            let planeX = strike.x - Math.cos(strike.angle) * 1500 * (strike.timer / 2.0);
+            let planeY = strike.y - Math.sin(strike.angle) * 1500 * (strike.timer / 2.0);
+            this.drawPlane(planeX, planeY, strike.angle);
+        }
+        for (let p of this.planes) {
+            this.drawPlane(p.x, p.y, p.angle);
+        }
+
+        this.ctx.restore();
+    }
+
+    private drawPlane(x: number, y: number, angle: number) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.rotate(angle);
+        
+        // Plane Shadow
+        this.ctx.save();
+        this.ctx.translate(50, 50); // Shadow offset
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(30, 0);
+        this.ctx.lineTo(-10, 40);
+        this.ctx.lineTo(-20, 40);
+        this.ctx.lineTo(-10, 10);
+        this.ctx.lineTo(-30, 15);
+        this.ctx.lineTo(-40, 15);
+        this.ctx.lineTo(-35, 0);
+        this.ctx.lineTo(-40, -15);
+        this.ctx.lineTo(-30, -15);
+        this.ctx.lineTo(-10, -10);
+        this.ctx.lineTo(-20, -40);
+        this.ctx.lineTo(-10, -40);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Plane Body
+        this.ctx.fillStyle = '#1e293b'; // Dark slate
+        this.ctx.beginPath();
+        this.ctx.moveTo(30, 0); // Nose
+        this.ctx.lineTo(-10, 40); // Right wing tip
+        this.ctx.lineTo(-20, 40);
+        this.ctx.lineTo(-10, 10); // Right wing base
+        this.ctx.lineTo(-30, 15); // Right tail tip
+        this.ctx.lineTo(-40, 15);
+        this.ctx.lineTo(-35, 0); // Tail center
+        this.ctx.lineTo(-40, -15);
+        this.ctx.lineTo(-30, -15); // Left tail tip
+        this.ctx.lineTo(-10, -10); // Left wing base
+        this.ctx.lineTo(-20, -40);
+        this.ctx.lineTo(-10, -40); // Left wing tip
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Cockpit
+        this.ctx.fillStyle = '#94a3b8';
+        this.ctx.beginPath();
+        this.ctx.ellipse(10, 0, 8, 3, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        
         this.ctx.restore();
     }
 
     private drawRuin(obs: Obstacle) {
         this.ctx.save();
         
-        // Base structure
-        this.ctx.fillStyle = '#525252'; // Concrete gray
-        this.ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        const seed = Math.floor(Math.abs(obs.x + obs.y)) % 3;
+        const tex = this.textures[`ruin${seed}`];
         
-        // Ruin details (broken walls/windows)
-        this.ctx.strokeStyle = '#171717';
-        this.ctx.lineWidth = 2;
-        
-        // Draw some "rooms" or internal walls
-        this.ctx.beginPath();
-        if (obs.w > obs.h) {
-            for(let x = obs.x + 40; x < obs.x + obs.w; x += 60) {
-                this.ctx.moveTo(x, obs.y);
-                this.ctx.lineTo(x, obs.y + obs.h * 0.7);
-            }
-        } else {
-            for(let y = obs.y + 40; y < obs.y + obs.h; y += 60) {
-                this.ctx.moveTo(obs.x, y);
-                this.ctx.lineTo(obs.x + obs.w * 0.7, y);
-            }
-        }
-        this.ctx.stroke();
-
-        // Broken edges (jagged look)
-        this.ctx.fillStyle = '#262626';
-        const seed = (obs.x + obs.y) % 100;
-        if (seed > 50) {
-            // Top jagged
+        if (tex && tex.complete && tex.naturalWidth > 0) {
+            // Draw real photo
             this.ctx.beginPath();
-            this.ctx.moveTo(obs.x, obs.y);
-            this.ctx.lineTo(obs.x + obs.w * 0.3, obs.y + 10);
-            this.ctx.lineTo(obs.x + obs.w * 0.6, obs.y - 5);
-            this.ctx.lineTo(obs.x + obs.w, obs.y + 15);
-            this.ctx.lineTo(obs.x + obs.w, obs.y);
-            this.ctx.fill();
-        }
+            this.ctx.rect(obs.x, obs.y, obs.w, obs.h);
+            this.ctx.clip();
+            this.ctx.drawImage(tex, obs.x, obs.y, obs.w, obs.h);
+            
+            // Darken it to match the game's atmosphere
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+            
+            // Add a border
+            this.ctx.strokeStyle = '#171717';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+        } else {
+            // Base structure fallback
+            this.ctx.fillStyle = '#525252'; // Concrete gray
+            this.ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+            
+            // Ruin details (broken walls/windows)
+            this.ctx.strokeStyle = '#171717';
+            this.ctx.lineWidth = 2;
+            
+            // Draw some "rooms" or internal walls
+            this.ctx.beginPath();
+            if (obs.w > obs.h) {
+                for(let x = obs.x + 40; x < obs.x + obs.w; x += 60) {
+                    this.ctx.moveTo(x, obs.y);
+                    this.ctx.lineTo(x, obs.y + obs.h * 0.7);
+                }
+            } else {
+                for(let y = obs.y + 40; y < obs.y + obs.h; y += 60) {
+                    this.ctx.moveTo(obs.x, y);
+                    this.ctx.lineTo(obs.x + obs.w * 0.7, y);
+                }
+            }
+            this.ctx.stroke();
 
-        // Rebar / Exposed metal
-        this.ctx.strokeStyle = '#737373';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.moveTo(obs.x + obs.w, obs.y + 20);
-        this.ctx.lineTo(obs.x + obs.w + 10, obs.y + 15);
-        this.ctx.moveTo(obs.x + obs.w, obs.y + 30);
-        this.ctx.lineTo(obs.x + obs.w + 12, obs.y + 35);
-        this.ctx.stroke();
+            // Broken edges (jagged look)
+            this.ctx.fillStyle = '#262626';
+            const edgeSeed = (obs.x + obs.y) % 100;
+            if (edgeSeed > 50) {
+                // Top jagged
+                this.ctx.beginPath();
+                this.ctx.moveTo(obs.x, obs.y);
+                this.ctx.lineTo(obs.x + obs.w * 0.3, obs.y + 10);
+                this.ctx.lineTo(obs.x + obs.w * 0.6, obs.y - 5);
+                this.ctx.lineTo(obs.x + obs.w, obs.y + 15);
+                this.ctx.lineTo(obs.x + obs.w, obs.y);
+                this.ctx.fill();
+            }
+
+            // Rebar / Exposed metal
+            this.ctx.strokeStyle = '#737373';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(obs.x + obs.w, obs.y + 20);
+            this.ctx.lineTo(obs.x + obs.w + 10, obs.y + 15);
+            this.ctx.moveTo(obs.x + obs.w, obs.y + 30);
+            this.ctx.lineTo(obs.x + obs.w + 12, obs.y + 35);
+            this.ctx.stroke();
+        }
 
         this.ctx.restore();
     }
@@ -1081,10 +1359,10 @@ export class GameEngine {
         this.ctx.translate(tank.x, tank.y);
 
         // Tank drop shadow
-        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.shadowBlur = 10;
-        this.ctx.shadowOffsetX = 5;
-        this.ctx.shadowOffsetY = 5;
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.shadowBlur = 15;
+        this.ctx.shadowOffsetX = 8;
+        this.ctx.shadowOffsetY = 8;
 
         // Draw hull
         this.ctx.save();
@@ -1105,15 +1383,33 @@ export class GameEngine {
         // Main body with gradient
         const hullGradient = this.ctx.createLinearGradient(-tank.radius, -tank.radius, tank.radius, tank.radius);
         hullGradient.addColorStop(0, tank.color);
-        hullGradient.addColorStop(1, '#064e3b'); // darker shade
+        hullGradient.addColorStop(1, '#000000'); // darker shade
         
         this.ctx.fillStyle = hullGradient;
         this.ctx.beginPath();
         this.ctx.roundRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6, 4);
         this.ctx.fill();
         
+        // Add camo blobs
+        this.ctx.save();
+        this.ctx.clip(); // Clip to the rounded rect of the hull
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        let seed = tank.id * 12345;
+        for (let i = 0; i < 6; i++) {
+            seed = (seed * 9301 + 49297) % 233280;
+            let bx = (seed / 233280) * tank.radius * 2 - tank.radius;
+            seed = (seed * 9301 + 49297) % 233280;
+            let by = (seed / 233280) * tank.radius * 2 - tank.radius;
+            seed = (seed * 9301 + 49297) % 233280;
+            let br = (seed / 233280) * tank.radius * 0.6 + 2;
+            this.ctx.beginPath();
+            this.ctx.arc(bx, by, br, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        this.ctx.restore();
+
         // Hull border
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
         
@@ -1123,9 +1419,9 @@ export class GameEngine {
         this.ctx.restore();
 
         // Reset shadow for turret
-        this.ctx.shadowBlur = 5;
-        this.ctx.shadowOffsetX = 2;
-        this.ctx.shadowOffsetY = 2;
+        this.ctx.shadowBlur = 8;
+        this.ctx.shadowOffsetX = 4;
+        this.ctx.shadowOffsetY = 4;
 
         // Draw turret
         this.ctx.save();
@@ -1141,12 +1437,31 @@ export class GameEngine {
         
         // Turret body
         const turretGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, tank.radius * 0.6);
-        turretGradient.addColorStop(0, '#525252');
-        turretGradient.addColorStop(1, '#262626');
+        turretGradient.addColorStop(0, tank.color);
+        turretGradient.addColorStop(1, '#000000');
         this.ctx.fillStyle = turretGradient;
         this.ctx.beginPath();
         this.ctx.arc(0, 0, tank.radius * 0.6, 0, Math.PI * 2);
         this.ctx.fill();
+        
+        // Turret camo
+        this.ctx.save();
+        this.ctx.clip();
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        let tSeed = tank.id * 54321;
+        for (let i = 0; i < 4; i++) {
+            tSeed = (tSeed * 9301 + 49297) % 233280;
+            let bx = (tSeed / 233280) * tank.radius - tank.radius/2;
+            tSeed = (tSeed * 9301 + 49297) % 233280;
+            let by = (tSeed / 233280) * tank.radius - tank.radius/2;
+            tSeed = (tSeed * 9301 + 49297) % 233280;
+            let br = (tSeed / 233280) * tank.radius * 0.4 + 2;
+            this.ctx.beginPath();
+            this.ctx.arc(bx, by, br, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        this.ctx.restore();
+
         this.ctx.strokeStyle = '#171717';
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
