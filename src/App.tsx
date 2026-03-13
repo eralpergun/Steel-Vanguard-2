@@ -163,6 +163,14 @@ export default function App() {
 
     useEffect(() => {
         if (gameState === 'playing' && canvasRef.current) {
+            const handleResize = () => {
+                if (canvasRef.current) {
+                    canvasRef.current.width = window.innerWidth;
+                    canvasRef.current.height = window.innerHeight;
+                }
+            };
+            window.addEventListener('resize', handleResize);
+
             const engine = new GameEngine(
                 canvasRef.current, 
                 selectedTank, 
@@ -179,6 +187,7 @@ export default function App() {
             engine.start();
 
             return () => {
+                window.removeEventListener('resize', handleResize);
                 engine.stop();
             };
         }
@@ -599,7 +608,7 @@ export default function App() {
                                 }}
                                 className="bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
-                                RETURN TO BASE
+                                RETURN TO HOMEPAGE
                             </button>
                         </div>
                     </div>

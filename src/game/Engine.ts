@@ -309,6 +309,8 @@ export class GameEngine {
                 type: Math.floor(Math.random() * 3)
             });
         }
+        
+        this.forceUIUpdate();
     }
 
     private setupInput() {
