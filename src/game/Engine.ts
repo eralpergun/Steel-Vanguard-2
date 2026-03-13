@@ -112,13 +112,13 @@ export class GameEngine {
     private camY: number = 0;
     private shakeAmount: number = 0;
 
-    private difficulty: 'easy' | 'normal' | 'hard';
+    private difficulty: 'easy' | 'normal' | 'hard' | 'custom';
     private customEnemyCount?: number;
 
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void, customEnemyCount?: number) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customEnemyCount?: number) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -553,14 +553,11 @@ export class GameEngine {
         let maxEnemies: number;
         let scoreInterval = 500;
         
-        if (this.customEnemyCount !== undefined && this.customEnemyCount > 0) {
-            maxEnemies = this.customEnemyCount;
-            // Keep scoreInterval for difficulty scaling (health/damage) but don't increase maxEnemies
-            if (this.difficulty === 'easy') {
-                scoreInterval = 1000;
-            } else if (this.difficulty === 'hard') {
-                scoreInterval = 250;
-            }
+        let isCustomMode = this.difficulty === 'custom' && this.customEnemyCount !== undefined && this.customEnemyCount > 0;
+
+        if (isCustomMode) {
+            maxEnemies = this.customEnemyCount!;
+            scoreInterval = 500; // Default scaling for custom
         } else {
             let baseMaxEnemies = 6;
             if (this.difficulty === 'easy') {
@@ -573,8 +570,17 @@ export class GameEngine {
             maxEnemies = baseMaxEnemies + Math.floor(this.score / scoreInterval);
         }
         
-        if (this.spawnTimer <= 0 && this.enemies.length < maxEnemies) {
-            this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / scoreInterval) * 0.1);
+        let shouldSpawn = false;
+        if (isCustomMode) {
+            shouldSpawn = this.enemies.length < maxEnemies;
+        } else {
+            shouldSpawn = this.spawnTimer <= 0 && this.enemies.length < maxEnemies;
+        }
+
+        while (shouldSpawn) {
+            if (!isCustomMode) {
+                this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / scoreInterval) * 0.1);
+            }
             let angle = Math.random() * Math.PI * 2;
             let dist = Math.max(this.canvas.width, this.canvas.height) + 200;
             
@@ -620,6 +626,12 @@ export class GameEngine {
                 maxAmmo: 999,
                 isPlayer: false, color: type === 'scout' ? '#3b82f6' : (type === 'sniper' ? '#f59e0b' : '#ef4444') // blue, amber, red
             });
+
+            if (isCustomMode) {
+                shouldSpawn = this.enemies.length < maxEnemies;
+            } else {
+                shouldSpawn = false; // Only spawn one per frame if not custom
+            }
         }
 
         // --- Update Tanks ---
