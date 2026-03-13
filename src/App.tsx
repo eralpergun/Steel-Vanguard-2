@@ -399,7 +399,7 @@ export default function App() {
                                 </section>
                             </div>
 
-                            <div className="space-y-8 lg:sticky lg:top-8 lg:h-fit">
+                            <div className="space-y-8 sticky top-8 self-start">
                                 {/* Stats Panel */}
                                 <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
                                     <h3 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-3">

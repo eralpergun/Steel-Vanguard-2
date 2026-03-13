@@ -469,10 +469,11 @@ export class GameEngine {
                     life: 2.0
                 });
 
-                for (let enemy of this.enemies) {
-                    let dist = new Vec2(strike.x - enemy.x, strike.y - enemy.y).mag();
-                    if (dist < 200) {
-                        enemy.health -= 500;
+                const allTanks = [this.player, ...this.enemies];
+                for (let tank of allTanks) {
+                    let dist = new Vec2(strike.x - tank.x, strike.y - tank.y).mag();
+                    if (dist <= 200 + tank.radius) {
+                        tank.health = 0; // Instant kill if inside red circle
                     }
                 }
                 this.airstrikes.splice(i, 1);
