@@ -12,6 +12,7 @@ export default function App() {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+    const [customEnemyCount, setCustomEnemyCount] = useState<number | ''>('');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -171,7 +172,8 @@ export default function App() {
                     if (state.isGameOver) {
                         setGameState('gameover');
                     }
-                }
+                },
+                customEnemyCount !== '' ? customEnemyCount : undefined
             );
             engineRef.current = engine;
             engine.start();
@@ -180,7 +182,7 @@ export default function App() {
                 engine.stop();
             };
         }
-    }, [gameState, selectedTank, difficulty]);
+    }, [gameState, selectedTank, difficulty, customEnemyCount]);
 
     const tankStats = [
         { id: 'light', name: 'Light Tank', desc: 'Fast & Agile', hp: 108, speed: 360, armor: 'Low', dmg: 27 },
@@ -464,6 +466,25 @@ export default function App() {
                                                 {d}
                                             </button>
                                         ))}
+                                    </div>
+                                </section>
+
+                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">Custom Match</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Fixed Tank Count (Optional)</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="100"
+                                                value={customEnemyCount}
+                                                onChange={(e) => setCustomEnemyCount(e.target.value ? parseInt(e.target.value) : '')}
+                                                placeholder="Leave empty for default"
+                                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-neutral-700 focus:outline-none focus:border-emerald-500 transition-colors"
+                                            />
+                                            <p className="text-[10px] text-neutral-600 mt-2 uppercase tracking-wider">If set, the number of enemies will stay fixed and won't increase with score.</p>
+                                        </div>
                                     </div>
                                 </section>
 

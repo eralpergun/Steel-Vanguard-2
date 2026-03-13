@@ -113,16 +113,18 @@ export class GameEngine {
     private shakeAmount: number = 0;
 
     private difficulty: 'easy' | 'normal' | 'hard';
+    private customEnemyCount?: number;
 
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard', onUpdateUI: (state: any) => void, customEnemyCount?: number) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
         this.difficulty = difficulty;
         this.onUpdateUI = onUpdateUI;
+        this.customEnemyCount = customEnemyCount;
 
         this.loadTextures();
         this.init();
@@ -547,17 +549,29 @@ export class GameEngine {
 
         // --- Enemy Spawning ---
         this.spawnTimer -= dt;
-        let baseMaxEnemies = 6;
-        let scoreInterval = 500;
-        if (this.difficulty === 'easy') {
-            baseMaxEnemies = 4;
-            scoreInterval = 1000;
-        } else if (this.difficulty === 'hard') {
-            baseMaxEnemies = 8;
-            scoreInterval = 250;
-        }
         
-        let maxEnemies = baseMaxEnemies + Math.floor(this.score / scoreInterval);
+        let maxEnemies: number;
+        let scoreInterval = 500;
+        
+        if (this.customEnemyCount !== undefined && this.customEnemyCount > 0) {
+            maxEnemies = this.customEnemyCount;
+            // Keep scoreInterval for difficulty scaling (health/damage) but don't increase maxEnemies
+            if (this.difficulty === 'easy') {
+                scoreInterval = 1000;
+            } else if (this.difficulty === 'hard') {
+                scoreInterval = 250;
+            }
+        } else {
+            let baseMaxEnemies = 6;
+            if (this.difficulty === 'easy') {
+                baseMaxEnemies = 4;
+                scoreInterval = 1000;
+            } else if (this.difficulty === 'hard') {
+                baseMaxEnemies = 8;
+                scoreInterval = 250;
+            }
+            maxEnemies = baseMaxEnemies + Math.floor(this.score / scoreInterval);
+        }
         
         if (this.spawnTimer <= 0 && this.enemies.length < maxEnemies) {
             this.spawnTimer = Math.max(1.0, 4.0 - Math.floor(this.score / scoreInterval) * 0.1);
