@@ -80,6 +80,7 @@ export class GameEngine {
     private mouseX: number = 0;
     private mouseY: number = 0;
     private isMouseDown: boolean = false;
+    private isRightMouseDown: boolean = false;
 
     private nextId: number = 1;
     private player!: Tank;
@@ -97,6 +98,9 @@ export class GameEngine {
     private score: number = 0;
     private spawnTimer: number = 0;
     private itemSpawnTimer: number = 2.0;
+    private airstrikeCooldown: number = 0;
+    private airstrikes: {x: number, y: number, timer: number}[] = [];
+    private mgReloadTimer: number = 0;
 
     private camX: number = 0;
     private camY: number = 0;
@@ -220,14 +224,21 @@ export class GameEngine {
             this.mouseX = e.clientX - rect.left;
             this.mouseY = e.clientY - rect.top;
         };
-        const handleMouseDown = (e: MouseEvent) => { if (e.button === 0) this.isMouseDown = true; };
-        const handleMouseUp = (e: MouseEvent) => { if (e.button === 0) this.isMouseDown = false; };
+        const handleMouseDown = (e: MouseEvent) => { 
+            if (e.button === 0) this.isMouseDown = true; 
+            if (e.button === 2) this.isRightMouseDown = true;
+        };
+        const handleMouseUp = (e: MouseEvent) => { 
+            if (e.button === 0) this.isMouseDown = false; 
+            if (e.button === 2) this.isRightMouseDown = false;
+        };
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
         this.canvas.addEventListener('mousemove', handleMouseMove);
         this.canvas.addEventListener('mousedown', handleMouseDown);
         this.canvas.addEventListener('mouseup', handleMouseUp);
+        this.canvas.addEventListener('contextmenu', e => e.preventDefault());
 
         // Store cleanup function
         (this as any).cleanupInput = () => {
@@ -236,6 +247,7 @@ export class GameEngine {
             this.canvas.removeEventListener('mousemove', handleMouseMove);
             this.canvas.removeEventListener('mousedown', handleMouseDown);
             this.canvas.removeEventListener('mouseup', handleMouseUp);
+            this.canvas.removeEventListener('contextmenu', e => e.preventDefault());
         };
     }
 
@@ -302,6 +314,52 @@ export class GameEngine {
 
         if (this.isMouseDown && this.player.reloadTimer <= 0 && this.player.ammo > 0) {
             this.fireProjectile(this.player);
+        }
+
+        this.mgReloadTimer -= dt;
+        if (this.isRightMouseDown && this.mgReloadTimer <= 0 && this.player.ammo > 0) {
+            this.fireMachineGun(this.player);
+        }
+
+        this.airstrikeCooldown -= dt;
+        if (this.keys.has('f') && this.airstrikeCooldown <= 0) {
+            let nearestEnemy = null;
+            let minDist = Infinity;
+            for (let enemy of this.enemies) {
+                let dist = new Vec2(this.player.x - enemy.x, this.player.y - enemy.y).mag();
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestEnemy = enemy;
+                }
+            }
+            
+            if (nearestEnemy) {
+                this.airstrikeCooldown = 30;
+                this.airstrikes.push({x: nearestEnemy.x, y: nearestEnemy.y, timer: 2.0});
+                this.floatingTexts.push({
+                    x: nearestEnemy.x, y: nearestEnemy.y,
+                    text: "AIRSTRIKE INBOUND",
+                    life: 2.0, maxLife: 2.0,
+                    color: "#ef4444"
+                });
+            }
+        }
+
+        for (let i = this.airstrikes.length - 1; i >= 0; i--) {
+            let strike = this.airstrikes[i];
+            strike.timer -= dt;
+            if (strike.timer <= 0) {
+                this.spawnExplosion(strike.x, strike.y, '#ef4444', 100);
+                this.shakeAmount = 30;
+                
+                for (let enemy of this.enemies) {
+                    let dist = new Vec2(strike.x - enemy.x, strike.y - enemy.y).mag();
+                    if (dist < 200) {
+                        enemy.health -= 500;
+                    }
+                }
+                this.airstrikes.splice(i, 1);
+            }
         }
 
         // --- Item Spawning ---
@@ -612,6 +670,20 @@ export class GameEngine {
         }
 
         // --- Death Logic ---
+        if (this.player.health <= 0) {
+            this.spawnExplosion(this.player.x, this.player.y, '#10b981', 50);
+            this.onUpdateUI({ 
+                isGameOver: true, 
+                score: this.score, 
+                health: 0,
+                airstrikeCooldown: 0,
+                ammo: this.player.ammo,
+                maxAmmo: this.player.maxAmmo
+            });
+            this.stop();
+            return;
+        }
+
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             if (this.enemies[i].health <= 0) {
                 this.spawnExplosion(this.enemies[i].x, this.enemies[i].y, '#ef4444', 30);
@@ -642,8 +714,34 @@ export class GameEngine {
             score: this.score,
             isPaused: this.isPaused,
             ammo: this.player.ammo,
-            maxAmmo: this.player.maxAmmo
+            maxAmmo: this.player.maxAmmo,
+            airstrikeCooldown: Math.max(0, this.airstrikeCooldown)
         });
+    }
+
+    private fireMachineGun(tank: Tank) {
+        this.mgReloadTimer = 0.1;
+        tank.ammo -= 2;
+        if (tank.ammo < 0) tank.ammo = 0;
+        
+        let barrelLength = tank.radius + 10;
+        let spread = (Math.random() - 0.5) * 0.2;
+        let angle = tank.turretAngle + spread;
+        let px = tank.x + Math.cos(angle) * barrelLength;
+        let py = tank.y + Math.sin(angle) * barrelLength;
+
+        this.projectiles.push({
+            x: px, y: py,
+            vx: Math.cos(angle) * 1500,
+            vy: Math.sin(angle) * 1500,
+            radius: 2,
+            damage: tank.damage * 0.15,
+            ownerId: tank.id,
+            life: 0.8,
+            trail: []
+        });
+
+        this.spawnExplosion(px, py, '#fcd34d', 3);
     }
 
     private fireProjectile(tank: Tank) {
@@ -795,6 +893,25 @@ export class GameEngine {
                 this.ctx.fill();
             }
             this.ctx.restore();
+        }
+
+        // Draw Airstrikes
+        for (let strike of this.airstrikes) {
+            this.ctx.beginPath();
+            this.ctx.arc(strike.x, strike.y, 200, 0, Math.PI * 2);
+            this.ctx.fillStyle = `rgba(239, 68, 68, ${0.1 + Math.sin(strike.timer * 15) * 0.1})`;
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ef4444';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // Crosshair
+            this.ctx.beginPath();
+            this.ctx.moveTo(strike.x - 20, strike.y);
+            this.ctx.lineTo(strike.x + 20, strike.y);
+            this.ctx.moveTo(strike.x, strike.y - 20);
+            this.ctx.lineTo(strike.x, strike.y + 20);
+            this.ctx.stroke();
         }
 
         // Draw Tanks

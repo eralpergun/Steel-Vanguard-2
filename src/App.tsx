@@ -12,7 +12,7 @@ export default function App() {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
-    const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0 });
+    const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const [totalCoins, setTotalCoins] = useState(0);
@@ -166,7 +166,12 @@ export default function App() {
                 canvasRef.current, 
                 selectedTank, 
                 difficulty,
-                (state) => setUiState(prev => ({ ...prev, ...state }))
+                (state) => {
+                    setUiState(prev => ({ ...prev, ...state }));
+                    if (state.isGameOver) {
+                        setGameState('gameover');
+                    }
+                }
             );
             engineRef.current = engine;
             engine.start();
@@ -452,10 +457,34 @@ export default function App() {
                                 <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                                     <div 
                                         className="h-full bg-yellow-500 transition-all duration-300" 
-                                        style={{ width: `${uiState.reloadProgress * 100}%` }}
+                                        style={{ width: `${(uiState.ammo / uiState.maxAmmo) * 100}%` }}
                                     />
                                 </div>
                             </div>
+                            
+                            {/* Airstrike Cooldown UI */}
+                            {uiState.airstrikeCooldown > 0 && (
+                                <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-64">
+                                    <div className="flex justify-between items-end mb-2">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Airstrike (F)</span>
+                                        <span className="text-xl font-mono font-bold text-red-500">{Math.ceil(uiState.airstrikeCooldown)}s</span>
+                                    </div>
+                                    <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-red-500 transition-all duration-300" 
+                                            style={{ width: `${(uiState.airstrikeCooldown / 30) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            {uiState.airstrikeCooldown <= 0 && (
+                                <div className="bg-black/40 backdrop-blur-md border border-emerald-500/30 p-4 rounded-2xl w-64">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Airstrike (F)</span>
+                                        <span className="text-xl font-mono font-bold text-emerald-500">READY</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="text-right">
