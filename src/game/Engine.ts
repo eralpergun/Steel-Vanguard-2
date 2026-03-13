@@ -42,8 +42,9 @@ export type Obstacle = {
 export type Decoration = {
     x: number; y: number;
     size: number;
-    type: 'crater' | 'rubble';
+    type: 'crater' | 'rubble' | 'dead_tank';
     rotation: number;
+    color?: string;
 };
 
 export type Particle = {
@@ -99,7 +100,7 @@ export class GameEngine {
     private spawnTimer: number = 0;
     private itemSpawnTimer: number = 2.0;
     private airstrikeCooldown: number = 0;
-    private airstrikes: {x: number, y: number, timer: number}[] = [];
+    private airstrikes: {targetId: number, x: number, y: number, timer: number}[] = [];
     private mgReloadTimer: number = 0;
 
     private camX: number = 0;
@@ -335,7 +336,7 @@ export class GameEngine {
             
             if (nearestEnemy) {
                 this.airstrikeCooldown = 30;
-                this.airstrikes.push({x: nearestEnemy.x, y: nearestEnemy.y, timer: 2.0});
+                this.airstrikes.push({targetId: nearestEnemy.id, x: nearestEnemy.x, y: nearestEnemy.y, timer: 2.0});
                 this.floatingTexts.push({
                     x: nearestEnemy.x, y: nearestEnemy.y,
                     text: "AIRSTRIKE INBOUND",
@@ -347,6 +348,14 @@ export class GameEngine {
 
         for (let i = this.airstrikes.length - 1; i >= 0; i--) {
             let strike = this.airstrikes[i];
+            
+            // Track target if it still exists
+            let target = this.enemies.find(e => e.id === strike.targetId);
+            if (target) {
+                strike.x = target.x;
+                strike.y = target.y;
+            }
+
             strike.timer -= dt;
             if (strike.timer <= 0) {
                 this.spawnExplosion(strike.x, strike.y, '#ef4444', 100);
@@ -672,6 +681,13 @@ export class GameEngine {
         // --- Death Logic ---
         if (this.player.health <= 0) {
             this.spawnExplosion(this.player.x, this.player.y, '#10b981', 50);
+            this.decorations.push({
+                x: this.player.x, y: this.player.y,
+                size: this.player.radius,
+                type: 'dead_tank',
+                rotation: this.player.hullAngle,
+                color: '#1a4d2e' // Dark green
+            });
             this.onUpdateUI({ 
                 isGameOver: true, 
                 score: this.score, 
@@ -687,6 +703,13 @@ export class GameEngine {
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             if (this.enemies[i].health <= 0) {
                 this.spawnExplosion(this.enemies[i].x, this.enemies[i].y, '#ef4444', 30);
+                this.decorations.push({
+                    x: this.enemies[i].x, y: this.enemies[i].y,
+                    size: this.enemies[i].radius,
+                    type: 'dead_tank',
+                    rotation: this.enemies[i].hullAngle,
+                    color: '#4a0404' // Dark red
+                });
                 this.shakeAmount = 10; // Screen shake on enemy death
                 this.enemies.splice(i, 1);
                 let points = 100;
@@ -815,6 +838,34 @@ export class GameEngine {
                 this.ctx.fill();
                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
                 this.ctx.stroke();
+            } else if (dec.type === 'dead_tank') {
+                // Draw destroyed hull
+                this.ctx.fillStyle = dec.color || '#333';
+                this.ctx.beginPath();
+                this.ctx.roundRect(-dec.size, -dec.size * 0.8, dec.size * 2, dec.size * 1.6, 4);
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#111';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                // Draw broken turret
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, dec.size * 0.5, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Draw bent barrel
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(dec.size * 1.2, dec.size * 0.3); // slightly bent
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+                
+                // Add some scorch marks
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                this.ctx.beginPath();
+                this.ctx.arc(dec.size * 0.3, -dec.size * 0.2, dec.size * 0.4, 0, Math.PI * 2);
+                this.ctx.fill();
             } else {
                 // Rubble
                 this.ctx.fillStyle = '#404040';
