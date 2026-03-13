@@ -381,11 +381,27 @@ export default function App() {
                                         ))}
                                     </div>
                                 </section>
+
+                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">Leaderboard</h3>
+                                    <div className="space-y-4">
+                                        {leaderboard.map((entry, index) => (
+                                            <div key={entry.username} className="flex items-center justify-between p-4 bg-black/30 rounded-2xl border border-white/5">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-xs font-mono text-neutral-500">0{index + 1}</span>
+                                                    <span className="font-bold">{entry.username}</span>
+                                                </div>
+                                                <span className="font-mono text-yellow-500 font-bold">{(entry.score || 0).toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                        {leaderboard.length === 0 && <p className="text-neutral-500 text-center py-8 text-xs uppercase tracking-widest">No data available</p>}
+                                    </div>
+                                </section>
                             </div>
 
-                            <div className="space-y-8">
+                            <div className="space-y-8 lg:sticky lg:top-8 lg:h-fit">
                                 {/* Stats Panel */}
-                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8 sticky top-8">
+                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
                                     <h3 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-3">
                                         <Crosshair className="w-5 h-5 text-emerald-500" />
                                         Vehicle Specs
@@ -432,22 +448,6 @@ export default function App() {
                                             </div>
                                         </div>
                                     )}
-                                </section>
-
-                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
-                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">Leaderboard</h3>
-                                    <div className="space-y-4">
-                                        {leaderboard.map((entry, index) => (
-                                            <div key={entry.username} className="flex items-center justify-between p-4 bg-black/30 rounded-2xl border border-white/5">
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-xs font-mono text-neutral-500">0{index + 1}</span>
-                                                    <span className="font-bold">{entry.username}</span>
-                                                </div>
-                                                <span className="font-mono text-yellow-500 font-bold">{(entry.score || 0).toLocaleString()}</span>
-                                            </div>
-                                        ))}
-                                        {leaderboard.length === 0 && <p className="text-neutral-500 text-center py-8 text-xs uppercase tracking-widest">No data available</p>}
-                                    </div>
                                 </section>
 
                                 <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
