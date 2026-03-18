@@ -194,6 +194,7 @@ export default function App() {
                 },
                 customEnemyCount !== '' ? customEnemyCount : undefined
             );
+            engine.isMobile = isMobile;
             engineRef.current = engine;
             engine.start();
 
@@ -203,6 +204,12 @@ export default function App() {
             };
         }
     }, [gameState, selectedTank, difficulty, customEnemyCount]);
+
+    useEffect(() => {
+        if (engineRef.current) {
+            engineRef.current.isMobile = isMobile;
+        }
+    }, [isMobile]);
 
     const tankStats = [
         { id: 'light', name: 'Light Tank', desc: 'Fast & Agile', hp: 108, speed: 360, armor: 'Low', dmg: 27 },
@@ -645,8 +652,8 @@ export default function App() {
                                     baseColor="rgba(255,255,255,0.1)" 
                                     stickColor="rgba(255,255,255,0.5)" 
                                     move={(e) => {
-                                        if (engineRef.current && e.x !== null && e.y !== null) {
-                                            engineRef.current.setMobileMove(e.x / 60, -e.y / 60);
+                                        if (engineRef.current && typeof e.x === 'number' && typeof e.y === 'number') {
+                                            engineRef.current.setMobileMove(e.x, -e.y);
                                         }
                                     }} 
                                     stop={() => {
@@ -661,8 +668,8 @@ export default function App() {
                                     baseColor="rgba(239,68,68,0.1)" 
                                     stickColor="rgba(239,68,68,0.5)" 
                                     move={(e) => {
-                                        if (engineRef.current && e.x !== null && e.y !== null) {
-                                            engineRef.current.setMobileAim(e.x / 60, -e.y / 60);
+                                        if (engineRef.current && typeof e.x === 'number' && typeof e.y === 'number') {
+                                            engineRef.current.setMobileAim(e.x, -e.y);
                                             engineRef.current.setMobileFire(true);
                                         }
                                     }} 
@@ -674,7 +681,25 @@ export default function App() {
                                     }}
                                 />
                             </div>
-                            <div className="absolute top-1/2 right-12 -translate-y-1/2 pointer-events-auto">
+                            <div className="absolute top-1/2 right-12 -translate-y-1/2 pointer-events-auto flex flex-col gap-4">
+                                <button 
+                                    className={`w-16 h-16 rounded-full font-bold text-xs border-2 bg-blue-500/50 border-blue-500 text-white select-none`}
+                                    style={{ touchAction: 'none' }}
+                                    onPointerDown={(e) => {
+                                        e.preventDefault();
+                                        if (engineRef.current) engineRef.current.setMobileMachineGun(true);
+                                    }}
+                                    onPointerUp={(e) => {
+                                        e.preventDefault();
+                                        if (engineRef.current) engineRef.current.setMobileMachineGun(false);
+                                    }}
+                                    onPointerLeave={(e) => {
+                                        e.preventDefault();
+                                        if (engineRef.current) engineRef.current.setMobileMachineGun(false);
+                                    }}
+                                >
+                                    MG
+                                </button>
                                 <button 
                                     className={`w-16 h-16 rounded-full font-bold text-xs border-2 ${uiState.airstrikeCooldown <= 0 ? 'bg-emerald-500/50 border-emerald-500 text-white' : 'bg-neutral-800/50 border-neutral-600 text-neutral-400'}`}
                                     onClick={() => {

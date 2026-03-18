@@ -96,22 +96,28 @@ export class GameEngine {
     public isPaused: boolean = false;
     private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
 
+    public isMobile: boolean = false;
+    private mobileMoveX: number = 0;
+    private mobileMoveY: number = 0;
+    private mobileAimX: number = 0;
+    private mobileAimY: number = 0;
+
     public setMobileMove(dx: number, dy: number) {
-        if (dx < -0.3) this.keys.add('a'); else this.keys.delete('a');
-        if (dx > 0.3) this.keys.add('d'); else this.keys.delete('d');
-        if (dy < -0.3) this.keys.add('w'); else this.keys.delete('w');
-        if (dy > 0.3) this.keys.add('s'); else this.keys.delete('s');
+        this.mobileMoveX = dx;
+        this.mobileMoveY = dy;
     }
 
     public setMobileAim(dx: number, dy: number) {
-        if (dx !== 0 || dy !== 0) {
-            this.mouseX = this.canvas.width / 2 + dx * 100;
-            this.mouseY = this.canvas.height / 2 + dy * 100;
-        }
+        this.mobileAimX = dx;
+        this.mobileAimY = dy;
     }
 
     public setMobileFire(firing: boolean) {
         this.isMouseDown = firing;
+    }
+
+    public setMobileMachineGun(firing: boolean) {
+        this.isRightMouseDown = firing;
     }
 
     public triggerMobileAirstrike() {
@@ -417,14 +423,31 @@ export class GameEngine {
         let playerHealthFactor = Math.max(0.4, this.player.health / this.player.maxHealth);
         let currentPlayerMaxSpeed = this.player.maxSpeed * (this.player.speedBuffTimer > 0 ? 1.5 : 1.0) * playerHealthFactor;
 
-        if (inputY !== 0) {
-            this.player.speed = currentPlayerMaxSpeed * inputY;
-        } else {
-            this.player.speed *= 0.9; // Friction
-        }
+        if (this.mobileMoveX !== 0 || this.mobileMoveY !== 0) {
+            // Mobile absolute movement
+            const targetAngle = Math.atan2(this.mobileMoveY, this.mobileMoveX);
+            this.player.hullAngle = moveTowardsAngle(this.player.hullAngle, targetAngle, this.player.turnSpeed * dt * 2);
+            
+            let angleDiff = Math.abs(this.player.hullAngle - targetAngle);
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            angleDiff = Math.abs(angleDiff);
 
-        if (inputX !== 0) {
-            this.player.hullAngle += inputX * this.player.turnSpeed * dt;
+            const mag = Math.min(1, Math.sqrt(this.mobileMoveX * this.mobileMoveX + this.mobileMoveY * this.mobileMoveY));
+            if (angleDiff < Math.PI / 4) {
+                this.player.speed = currentPlayerMaxSpeed * mag;
+            } else {
+                this.player.speed = currentPlayerMaxSpeed * mag * 0.5;
+            }
+        } else {
+            if (inputY !== 0) {
+                this.player.speed = currentPlayerMaxSpeed * inputY;
+            } else {
+                this.player.speed *= 0.9; // Friction
+            }
+
+            if (inputX !== 0) {
+                this.player.hullAngle += inputX * this.player.turnSpeed * dt;
+            }
         }
 
         // Mouse aiming
@@ -433,10 +456,19 @@ export class GameEngine {
         this.camX += (targetCamX - this.camX) * 5 * dt;
         this.camY += (targetCamY - this.camY) * 5 * dt;
 
-        const mouseWorldX = this.mouseX + this.camX;
-        const mouseWorldY = this.mouseY + this.camY;
-
-        const targetAngle = Math.atan2(mouseWorldY - this.player.y, mouseWorldX - this.player.x);
+        let targetAngle;
+        if (this.isMobile) {
+            if (this.mobileAimX !== 0 || this.mobileAimY !== 0) {
+                targetAngle = Math.atan2(this.mobileAimY, this.mobileAimX);
+            } else {
+                targetAngle = this.player.turretAngle; // Keep current angle if not aiming
+            }
+        } else {
+            const mouseWorldX = this.mouseX + this.camX;
+            const mouseWorldY = this.mouseY + this.camY;
+            targetAngle = Math.atan2(mouseWorldY - this.player.y, mouseWorldX - this.player.x);
+        }
+        
         this.player.turretAngle = moveTowardsAngle(this.player.turretAngle, targetAngle, this.player.turretTurnSpeed * dt);
 
         if (this.isMouseDown && this.player.reloadTimer <= 0 && this.player.ammo > 0) {
