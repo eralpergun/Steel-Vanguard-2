@@ -3,6 +3,7 @@ import { GameEngine } from './game/Engine';
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
 import { ref, get, set, child, onValue, query, orderByChild, limitToLast } from 'firebase/database';
+import { Joystick } from 'react-joystick-component';
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,6 +16,16 @@ export default function App() {
     const [customEnemyCount, setCustomEnemyCount] = useState<number | ''>('');
     const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const [totalCoins, setTotalCoins] = useState(0);
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
@@ -509,6 +520,32 @@ export default function App() {
                                     )}
                                 </section>
 
+                                <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">Nasıl Oynanır?</h3>
+                                    <div className="space-y-4 text-sm text-neutral-400">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex gap-1">
+                                                <kbd className="bg-black border border-white/10 rounded px-2 py-1 font-mono text-xs text-white">W</kbd>
+                                                <kbd className="bg-black border border-white/10 rounded px-2 py-1 font-mono text-xs text-white">A</kbd>
+                                                <kbd className="bg-black border border-white/10 rounded px-2 py-1 font-mono text-xs text-white">S</kbd>
+                                                <kbd className="bg-black border border-white/10 rounded px-2 py-1 font-mono text-xs text-white">D</kbd>
+                                            </div>
+                                            <span>Hareket Et</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <kbd className="bg-black border border-white/10 rounded px-2 py-1 font-mono text-xs text-white">Mouse</kbd>
+                                            <span>Nişan Al ve Ateş Et</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <kbd className="bg-black border border-white/10 rounded px-2 py-1 font-mono text-xs text-white">F</kbd>
+                                            <span>Hava Saldırısı (Airstrike)</span>
+                                        </div>
+                                        <p className="text-xs mt-4 text-neutral-500">
+                                            Düşmanları yok ederek puan topla, yeni tanklar aç ve liderlik tablosunda yüksel!
+                                        </p>
+                                    </div>
+                                </section>
+
                                 <button
                                     onClick={() => setGameState('playing')}
                                     className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl py-6 rounded-3xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-emerald-900/20 uppercase tracking-tighter"
@@ -589,12 +626,68 @@ export default function App() {
                     </div>
 
                     {/* Custom Crosshair */}
-                    <div 
-                        className="fixed pointer-events-none z-50 mix-blend-difference"
-                        style={{ left: mousePos.x, top: mousePos.y, transform: 'translate(-50%, -50%)' }}
-                    >
-                        <Crosshair className="w-8 h-8 text-white opacity-80" />
-                    </div>
+                    {!isMobile && (
+                        <div 
+                            className="fixed pointer-events-none z-50 mix-blend-difference"
+                            style={{ left: mousePos.x, top: mousePos.y, transform: 'translate(-50%, -50%)' }}
+                        >
+                            <Crosshair className="w-8 h-8 text-white opacity-80" />
+                        </div>
+                    )}
+
+                    {/* Mobile Controls */}
+                    {isMobile && (
+                        <div className="absolute inset-0 pointer-events-none z-40">
+                            <div className="absolute bottom-12 left-12 pointer-events-auto opacity-70">
+                                <Joystick 
+                                    size={120} 
+                                    sticky={false} 
+                                    baseColor="rgba(255,255,255,0.1)" 
+                                    stickColor="rgba(255,255,255,0.5)" 
+                                    move={(e) => {
+                                        if (engineRef.current && e.x !== null && e.y !== null) {
+                                            engineRef.current.setMobileMove(e.x / 60, -e.y / 60);
+                                        }
+                                    }} 
+                                    stop={() => {
+                                        if (engineRef.current) engineRef.current.setMobileMove(0, 0);
+                                    }}
+                                />
+                            </div>
+                            <div className="absolute bottom-12 right-12 pointer-events-auto opacity-70">
+                                <Joystick 
+                                    size={120} 
+                                    sticky={false} 
+                                    baseColor="rgba(239,68,68,0.1)" 
+                                    stickColor="rgba(239,68,68,0.5)" 
+                                    move={(e) => {
+                                        if (engineRef.current && e.x !== null && e.y !== null) {
+                                            engineRef.current.setMobileAim(e.x / 60, -e.y / 60);
+                                            engineRef.current.setMobileFire(true);
+                                        }
+                                    }} 
+                                    stop={() => {
+                                        if (engineRef.current) {
+                                            engineRef.current.setMobileAim(0, 0);
+                                            engineRef.current.setMobileFire(false);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="absolute top-1/2 right-12 -translate-y-1/2 pointer-events-auto">
+                                <button 
+                                    className={`w-16 h-16 rounded-full font-bold text-xs border-2 ${uiState.airstrikeCooldown <= 0 ? 'bg-emerald-500/50 border-emerald-500 text-white' : 'bg-neutral-800/50 border-neutral-600 text-neutral-400'}`}
+                                    onClick={() => {
+                                        if (engineRef.current && uiState.airstrikeCooldown <= 0) {
+                                            engineRef.current.triggerMobileAirstrike();
+                                        }
+                                    }}
+                                >
+                                    AIRSTRIKE
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

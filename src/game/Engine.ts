@@ -96,6 +96,29 @@ export class GameEngine {
     public isPaused: boolean = false;
     private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
 
+    public setMobileMove(dx: number, dy: number) {
+        if (dx < -0.3) this.keys.add('a'); else this.keys.delete('a');
+        if (dx > 0.3) this.keys.add('d'); else this.keys.delete('d');
+        if (dy < -0.3) this.keys.add('w'); else this.keys.delete('w');
+        if (dy > 0.3) this.keys.add('s'); else this.keys.delete('s');
+    }
+
+    public setMobileAim(dx: number, dy: number) {
+        if (dx !== 0 || dy !== 0) {
+            this.mouseX = this.canvas.width / 2 + dx * 100;
+            this.mouseY = this.canvas.height / 2 + dy * 100;
+        }
+    }
+
+    public setMobileFire(firing: boolean) {
+        this.isMouseDown = firing;
+    }
+
+    public triggerMobileAirstrike() {
+        this.keys.add('f');
+        setTimeout(() => this.keys.delete('f'), 100);
+    }
+
     private score: number = 0;
     private spawnTimer: number = 0;
     private itemSpawnTimer: number = 2.0;
