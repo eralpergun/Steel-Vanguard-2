@@ -223,8 +223,13 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-black">
                     <div className="w-full max-w-md p-8 bg-neutral-900/50 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl">
                         <div className="text-center mb-8">
-                            <div className="inline-flex p-4 bg-emerald-500/10 rounded-2xl mb-4">
-                                <Target className="w-12 h-12 text-emerald-500" />
+                            <div className="inline-flex p-2 bg-emerald-500/10 rounded-3xl mb-4 overflow-hidden border border-emerald-500/20 shadow-2xl shadow-emerald-900/20">
+                                <img 
+                                    src="https://images.unsplash.com/vector-1773841562611-cc6caf104fbe?q=80&w=2728&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                                    alt="Tank Fight Logo" 
+                                    className="w-24 h-24 object-cover rounded-2xl"
+                                    referrerPolicy="no-referrer"
+                                />
                             </div>
                             <h1 className="text-4xl font-black uppercase tracking-tighter mb-2">Tank Fight</h1>
                             <p className="text-neutral-500 text-sm uppercase tracking-widest">War-Torn City Combat</p>
@@ -258,9 +263,17 @@ export default function App() {
                 <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-black p-8">
                     <div className="max-w-6xl mx-auto">
                         <div className="flex justify-between items-end mb-12 border-b border-white/5 pb-8">
-                            <div>
-                                <h1 className="text-5xl font-black uppercase tracking-tighter mb-2">Command Center</h1>
-                                <p className="text-neutral-500 uppercase tracking-widest text-sm">Welcome back, <span className="text-emerald-500">{username}</span></p>
+                            <div className="flex items-center gap-6">
+                                <img 
+                                    src="https://images.unsplash.com/vector-1773841562611-cc6caf104fbe?q=80&w=2728&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                                    alt="Tank Fight Logo" 
+                                    className="w-20 h-20 object-cover rounded-2xl border border-white/10 shadow-2xl shadow-emerald-900/20"
+                                    referrerPolicy="no-referrer"
+                                />
+                                <div>
+                                    <h1 className="text-5xl font-black uppercase tracking-tighter mb-2">Command Center</h1>
+                                    <p className="text-neutral-500 uppercase tracking-widest text-sm">Welcome back, <span className="text-emerald-500">{username}</span></p>
+                                </div>
                             </div>
                             <div className="text-right">
                                 <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">Total War Credits</p>
@@ -588,6 +601,14 @@ export default function App() {
             {gameState === 'gameover' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-50">
                     <div className="text-center max-w-md p-12 bg-neutral-900/50 rounded-[3rem] border border-white/5">
+                        <div className="flex justify-center mb-6">
+                            <img 
+                                src="https://images.unsplash.com/vector-1773841562611-cc6caf104fbe?q=80&w=2728&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                                alt="Tank Fight Logo" 
+                                className="w-24 h-24 object-cover rounded-2xl border border-white/10 shadow-2xl shadow-red-900/20"
+                                referrerPolicy="no-referrer"
+                            />
+                        </div>
                         <h2 className="text-6xl font-black uppercase tracking-tighter text-red-500 mb-4">Vehicle Destroyed</h2>
                         <p className="text-neutral-400 uppercase tracking-widest text-sm mb-8">Combat operation terminated</p>
                         <div className="bg-black/50 p-6 rounded-2xl mb-8 border border-white/5">
@@ -618,6 +639,14 @@ export default function App() {
             {gameState === 'playing' && uiState.isPaused && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-50">
                     <div className="text-center">
+                        <div className="flex justify-center mb-8">
+                            <img 
+                                src="https://images.unsplash.com/vector-1773841562611-cc6caf104fbe?q=80&w=2728&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                                alt="Tank Fight Logo" 
+                                className="w-32 h-32 object-cover rounded-3xl border border-white/10 shadow-2xl"
+                                referrerPolicy="no-referrer"
+                            />
+                        </div>
                         <h2 className="text-8xl font-black uppercase tracking-tighter text-white mb-12">PAUSED</h2>
                         <div className="flex flex-col gap-4 items-center">
                             <button
