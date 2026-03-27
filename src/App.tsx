@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { GameEngine } from './game/Engine';
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
@@ -6,9 +7,35 @@ import { ref, get, set, child, onValue, query, orderByChild, limitToLast } from 
 import { Joystick } from 'react-joystick-component';
 
 export default function App() {
+    return (
+        <BrowserRouter>
+            <AppInner />
+        </BrowserRouter>
+    );
+}
+
+function AppInner() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<GameEngine | null>(null);
-    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('login');
+    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>(() => {
+        if (window.location.pathname === '/menu') return 'menu';
+        if (window.location.pathname === '/war') return 'playing';
+        return 'login';
+    });
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (gameState === 'login' && location.pathname !== '/') navigate('/');
+        else if (gameState === 'menu' && location.pathname !== '/menu') navigate('/menu');
+        else if ((gameState === 'playing' || gameState === 'gameover') && location.pathname !== '/war') navigate('/war');
+    }, [gameState, navigate, location.pathname]);
+
+    useEffect(() => {
+        if (location.pathname === '/' && gameState !== 'login') setGameState('login');
+        else if (location.pathname === '/menu' && gameState !== 'menu') setGameState('menu');
+        else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
+    }, [location.pathname]);
     const [username, setUsername] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
