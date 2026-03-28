@@ -322,7 +322,16 @@ function AppInner() {
                             </div>
                             <div className="text-right">
                                 <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">Total War Credits</p>
-                                <p className="text-4xl font-mono font-bold text-yellow-500">{(totalCoins || 0).toLocaleString()}</p>
+                                <p className="text-4xl font-mono font-bold text-yellow-500 mb-2">{(totalCoins || 0).toLocaleString()}</p>
+                                <button
+                                    onClick={() => {
+                                        setUsername('');
+                                        setGameState('login');
+                                    }}
+                                    className="text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors"
+                                >
+                                    Çıkış Yap
+                                </button>
                             </div>
                         </div>
 
