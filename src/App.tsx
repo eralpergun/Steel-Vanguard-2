@@ -17,26 +17,20 @@ export default function App() {
 function AppInner() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<GameEngine | null>(null);
-    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>(() => {
-        if (window.location.pathname === '/menu') return 'menu';
-        if (window.location.pathname === '/war') return 'playing';
-        return 'login';
-    });
+    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('menu');
     const navigate = useNavigate();
     const location = useLocation();
 
     useEffect(() => {
-        if (gameState === 'login' && location.pathname !== '/') navigate('/');
-        else if (gameState === 'menu' && location.pathname !== '/menu') navigate('/menu');
+        if (gameState === 'menu' && location.pathname !== '/') navigate('/');
         else if ((gameState === 'playing' || gameState === 'gameover') && location.pathname !== '/war') navigate('/war');
     }, [gameState, navigate, location.pathname]);
 
     useEffect(() => {
-        if (location.pathname === '/' && gameState !== 'login') setGameState('login');
-        else if (location.pathname === '/menu' && gameState !== 'menu') setGameState('menu');
+        if (location.pathname === '/' && gameState !== 'menu') setGameState('menu');
         else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
     }, [location.pathname]);
-    const [username, setUsername] = useState('');
+    const [username, setUsername] = useState('Anonymous');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
@@ -55,7 +49,7 @@ function AppInner() {
     }, []);
 
     const [totalCoins, setTotalCoins] = useState(0);
-    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
+    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy', '67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili', 'op_tank', 'secret', 'shitty']);
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
 
