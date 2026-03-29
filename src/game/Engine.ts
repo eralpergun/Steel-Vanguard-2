@@ -1,5 +1,11 @@
 import { Vec2, resolveCircleAABB, resolveCircleCircle, moveTowardsAngle } from './utils';
 
+export type Customization = {
+    paintJob: string;
+    decal: string;
+    visualMod: string;
+};
+
 export type Tank = {
     id: number;
     x: number; y: number;
@@ -21,6 +27,7 @@ export type Tank = {
     isPlayer: boolean;
     color: string;
     type?: string;
+    customization?: Customization;
 };
 
 export type Projectile = {
@@ -37,6 +44,8 @@ export type Obstacle = {
     x: number; y: number;
     w: number; h: number;
     type: 'building' | 'ruin' | 'wall';
+    health: number;
+    maxHealth: number;
 };
 
 export type Decoration = {
@@ -95,6 +104,7 @@ export class GameEngine {
 
     public isPaused: boolean = false;
     private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
+    private customization: Customization;
 
     public isMobile: boolean = false;
     private mobileMoveX: number = 0;
@@ -147,12 +157,13 @@ export class GameEngine {
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customEnemyCount?: number) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customization: Customization, customEnemyCount?: number) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
         this.difficulty = difficulty;
         this.onUpdateUI = onUpdateUI;
+        this.customization = customization;
         this.customEnemyCount = customEnemyCount;
 
         this.loadTextures();
@@ -243,7 +254,8 @@ export class GameEngine {
             ammo: maxAmmo,
             maxAmmo: maxAmmo,
             isPlayer: true,
-            color: '#10b981' // emerald-500
+            color: this.customization.paintJob, // Use paintJob as color
+            customization: this.customization
         };
         this.camX = this.player.x;
         this.camY = this.player.y;
@@ -313,7 +325,9 @@ export class GameEngine {
             
             this.obstacles.push({
                 x, y, w, h,
-                type: Math.random() > 0.3 ? 'ruin' : 'building'
+                type: Math.random() > 0.3 ? 'ruin' : 'building',
+                health: 100,
+                maxHealth: 100
             });
         }
 
@@ -792,11 +806,20 @@ export class GameEngine {
 
             // Projectile vs Obstacle
             if (!destroyed) {
-                for (let obs of this.obstacles) {
+                for (let i = 0; i < this.obstacles.length; i++) {
+                    let obs = this.obstacles[i];
                     let res = resolveCircleAABB(p.x, p.y, p.radius, obs.x, obs.y, obs.w, obs.h);
                     if (res.hit) {
                         destroyed = true;
+                        
+                        // Damage obstacle
+                        obs.health -= p.damage;
                         this.spawnExplosion(p.x, p.y, '#737373', 5); // Dust
+                        
+                        if (obs.health <= 0) {
+                            this.obstacles.splice(i, 1);
+                            this.spawnExplosion(obs.x + obs.w/2, obs.y + obs.h/2, '#525252', 20); // Big explosion
+                        }
                         break;
                     }
                 }
@@ -1482,13 +1505,29 @@ export class GameEngine {
 
         // Main body with gradient
         const hullGradient = this.ctx.createLinearGradient(-tank.radius, -tank.radius, tank.radius, tank.radius);
-        hullGradient.addColorStop(0, tank.color);
+        hullGradient.addColorStop(0, tank.customization?.paintJob || tank.color);
         hullGradient.addColorStop(1, '#000000'); // darker shade
         
         this.ctx.fillStyle = hullGradient;
         this.ctx.beginPath();
         this.ctx.roundRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6, 4);
         this.ctx.fill();
+
+        // Apply decal if present
+        if (tank.customization && tank.customization.decal !== 'none') {
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            this.ctx.font = 'bold 12px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(tank.customization.decal, 0, 5);
+        }
+
+        // Apply visual mod if present
+        if (tank.customization && tank.customization.visualMod !== 'none') {
+            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, tank.radius * 0.3, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
         
         // Add camo blobs
         this.ctx.save();

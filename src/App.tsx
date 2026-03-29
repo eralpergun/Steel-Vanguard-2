@@ -51,6 +51,7 @@ function AppInner() {
 
     const [totalCoins, setTotalCoins] = useState(0);
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy', '67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili', 'op_tank', 'secret', 'shitty']);
+    const [customization, setCustomization] = useState({ paintJob: '#10b981', decal: 'none', visualMod: 'none' });
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
 
@@ -83,14 +84,17 @@ function AppInner() {
                 const data = snapshot.val();
                 setTotalCoins(data.totalCoins || 0);
                 setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
+                setCustomization(data.customization || { paintJob: '#10b981', decal: 'none', visualMod: 'none' });
             } else {
                 // Initialize new user
                 await set(playerRef, {
                     totalCoins: 0,
-                    unlockedTanks: ['light', 'medium', 'heavy']
+                    unlockedTanks: ['light', 'medium', 'heavy'],
+                    customization: { paintJob: '#10b981', decal: 'none', visualMod: 'none' }
                 });
                 setTotalCoins(0);
                 setUnlockedTanks(['light', 'medium', 'heavy']);
+                setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none' });
             }
             setGameState('menu');
         } catch (error) {
@@ -107,7 +111,8 @@ function AppInner() {
                 try {
                     await set(ref(db, `players/${username}`), {
                         totalCoins,
-                        unlockedTanks
+                        unlockedTanks,
+                        customization
                     });
                     
                     await set(ref(db, `leaderboard/${username}`), {
@@ -214,6 +219,7 @@ function AppInner() {
                         setGameState('gameover');
                     }
                 },
+                customization,
                 customEnemyCount !== '' ? customEnemyCount : undefined
             );
             engine.isMobile = isMobile;
@@ -225,7 +231,7 @@ function AppInner() {
                 engine.stop();
             };
         }
-    }, [gameState, selectedTank, difficulty, customEnemyCount]);
+    }, [gameState, selectedTank, difficulty, customEnemyCount, customization]);
 
     useEffect(() => {
         if (engineRef.current) {
@@ -362,6 +368,37 @@ function AppInner() {
                                                 </ul>
                                             </button>
                                         ))}
+                                    </div>
+                                    <div className="mt-8 bg-gradient-to-br from-neutral-900 to-black rounded-3xl border border-white/10 p-8 shadow-2xl">
+                                        <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
+                                            <div className="w-2 h-6 bg-emerald-500 rounded-full"></div>
+                                            Customize Tank
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Paint Job</label>
+                                                <div className="relative group">
+                                                    <input type="color" value={customization.paintJob} onChange={(e) => setCustomization(prev => ({ ...prev, paintJob: e.target.value }))} className="w-full h-12 rounded-xl cursor-pointer bg-neutral-800 border border-white/10 p-1" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Decal</label>
+                                                <select value={customization.decal} onChange={(e) => setCustomization(prev => ({ ...prev, decal: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                    <option value="none">None</option>
+                                                    <option value="★">Star</option>
+                                                    <option value="☠">Skull</option>
+                                                    <option value="⚡">Bolt</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Visual Mod</label>
+                                                <select value={customization.visualMod} onChange={(e) => setCustomization(prev => ({ ...prev, visualMod: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                    <option value="none">None</option>
+                                                    <option value="antenna">Antenna</option>
+                                                    <option value="armor">Extra Armor</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
                                 </section>
 
