@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { GameEngine } from './game/Engine';
-import { SoundManager } from './game/SoundManager';
+
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
 import { ref, get, set, child, onValue, query, orderByChild, limitToLast } from 'firebase/database';
@@ -204,7 +204,6 @@ function AppInner() {
             };
             window.addEventListener('resize', handleResize);
 
-            const soundManager = new SoundManager();
             const engine = new GameEngine(
                 canvasRef.current, 
                 selectedTank, 
@@ -215,7 +214,6 @@ function AppInner() {
                         setGameState('gameover');
                     }
                 },
-                soundManager,
                 customEnemyCount !== '' ? customEnemyCount : undefined
             );
             engine.isMobile = isMobile;

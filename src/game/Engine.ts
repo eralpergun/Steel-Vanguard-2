@@ -1,5 +1,4 @@
 import { Vec2, resolveCircleAABB, resolveCircleCircle, moveTowardsAngle } from './utils';
-import { SoundManager } from './SoundManager';
 
 export type Tank = {
     id: number;
@@ -74,7 +73,6 @@ export class GameEngine {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private onUpdateUI: (state: any) => void;
-    private soundManager: SoundManager;
     private isRunning: boolean = false;
     private lastTime: number = 0;
     private animationFrameId: number = 0;
@@ -142,7 +140,6 @@ export class GameEngine {
     private camX: number = 0;
     private camY: number = 0;
     private shakeAmount: number = 0;
-    private lastMoveSoundTime: number = 0;
 
     private difficulty: 'easy' | 'normal' | 'hard' | 'custom';
     private customEnemyCount?: number;
@@ -150,13 +147,12 @@ export class GameEngine {
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, soundManager: SoundManager, customEnemyCount?: number) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customEnemyCount?: number) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
         this.difficulty = difficulty;
         this.onUpdateUI = onUpdateUI;
-        this.soundManager = soundManager;
         this.customEnemyCount = customEnemyCount;
 
         this.loadTextures();
@@ -585,7 +581,6 @@ export class GameEngine {
                         life: 1.5, maxLife: 1.5,
                         color: "#10b981"
                     });
-                    this.soundManager.play('pickup');
                     this.items.splice(i, 1);
                 } else if (item.type === 'speed') {
                     this.player.speedBuffTimer = 10.0;
@@ -595,7 +590,6 @@ export class GameEngine {
                         life: 1.5, maxLife: 1.5,
                         color: "#3b82f6"
                     });
-                    this.soundManager.play('pickup');
                     this.items.splice(i, 1);
                 } else if (item.type === 'ammo' && this.player.ammo < this.player.maxAmmo) {
                     this.player.ammo = this.player.maxAmmo;
@@ -605,7 +599,6 @@ export class GameEngine {
                         life: 1.5, maxLife: 1.5,
                         color: "#f59e0b"
                     });
-                    this.soundManager.play('pickup');
                     this.items.splice(i, 1);
                 }
             }
@@ -708,11 +701,6 @@ export class GameEngine {
             // Move
             tank.x += Math.cos(tank.hullAngle) * tank.speed * dt;
             tank.y += Math.sin(tank.hullAngle) * tank.speed * dt;
-
-            if (tank.isPlayer && tank.speed !== 0 && Date.now() - this.lastMoveSoundTime > 500) {
-                this.soundManager.play('move');
-                this.lastMoveSoundTime = Date.now();
-            }
 
             // AI Logic
             if (!tank.isPlayer) {
@@ -956,7 +944,6 @@ export class GameEngine {
     }
 
     private fireMachineGun(tank: Tank) {
-        this.soundManager.play('shoot');
         this.mgReloadTimer = 0.1;
         tank.ammo -= 2;
         if (tank.ammo < 0) tank.ammo = 0;
@@ -984,7 +971,6 @@ export class GameEngine {
     }
 
     private fireProjectile(tank: Tank) {
-        this.soundManager.play('shoot');
         tank.reloadTimer = tank.reloadTime;
         tank.ammo--;
         let barrelLength = tank.radius + 15;
@@ -1012,7 +998,6 @@ export class GameEngine {
     }
 
     private spawnExplosion(x: number, y: number, color: string, count: number) {
-        this.soundManager.play('explosion');
         for (let i = 0; i < count; i++) {
             let angle = Math.random() * Math.PI * 2;
             let speed = Math.random() * 100 + 50;
