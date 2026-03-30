@@ -18,17 +18,23 @@ export default function App() {
 function AppInner() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<GameEngine | null>(null);
-    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>('menu');
+    const [gameState, setGameState] = useState<'login' | 'menu' | 'playing' | 'gameover'>(() => {
+        if (window.location.pathname === '/login') return 'login';
+        if (window.location.pathname === '/war') return 'playing';
+        return 'menu';
+    });
     const navigate = useNavigate();
     const location = useLocation();
 
     useEffect(() => {
-        if (gameState === 'menu' && location.pathname !== '/') navigate('/');
+        if (gameState === 'login' && location.pathname !== '/login') navigate('/login');
+        else if (gameState === 'menu' && location.pathname !== '/') navigate('/');
         else if ((gameState === 'playing' || gameState === 'gameover') && location.pathname !== '/war') navigate('/war');
     }, [gameState, navigate, location.pathname]);
 
     useEffect(() => {
-        if (location.pathname === '/' && gameState !== 'menu') setGameState('menu');
+        if (location.pathname === '/login' && gameState !== 'login') setGameState('login');
+        else if (location.pathname === '/' && gameState !== 'menu') setGameState('menu');
         else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
     }, [location.pathname]);
     const [username, setUsername] = useState('Anonymous');

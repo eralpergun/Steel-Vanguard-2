@@ -48,6 +48,14 @@ export type Obstacle = {
     maxHealth: number;
 };
 
+export type Shockwave = {
+    x: number; y: number;
+    radius: number;
+    maxRadius: number;
+    life: number;
+    color: string;
+};
+
 export type Decoration = {
     x: number; y: number;
     size: number;
@@ -101,6 +109,7 @@ export class GameEngine {
     private particles: Particle[] = [];
     private floatingTexts: FloatingText[] = [];
     private items: Item[] = [];
+    private shockwaves: Shockwave[] = [];
 
     public isPaused: boolean = false;
     private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
@@ -326,8 +335,8 @@ export class GameEngine {
             this.obstacles.push({
                 x, y, w, h,
                 type: Math.random() > 0.3 ? 'ruin' : 'building',
-                health: 100,
-                maxHealth: 100
+                health: 2000,
+                maxHealth: 2000
             });
         }
 
@@ -531,7 +540,7 @@ export class GameEngine {
 
             strike.timer -= dt;
             if (strike.timer <= 0) {
-                this.spawnExplosion(strike.x, strike.y, '#ef4444', 100);
+                this.spawnAirstrikeExplosion(strike.x, strike.y, '#ef4444', 300);
                 this.shakeAmount = 30;
                 
                 // Plane continues flying after dropping bomb
@@ -716,6 +725,23 @@ export class GameEngine {
             tank.x += Math.cos(tank.hullAngle) * tank.speed * dt;
             tank.y += Math.sin(tank.hullAngle) * tank.speed * dt;
 
+            // --- Damage Effects ---
+            if (tank.health < tank.maxHealth * 0.5) {
+                // Spawn smoke/sparks
+                if (Math.random() < 0.1) {
+                    this.particles.push({
+                        x: tank.x + (Math.random() - 0.5) * tank.radius,
+                        y: tank.y + (Math.random() - 0.5) * tank.radius,
+                        vx: (Math.random() - 0.5) * 50,
+                        vy: -Math.random() * 50,
+                        life: 0.5 + Math.random() * 0.5,
+                        maxLife: 1.0,
+                        color: tank.health < tank.maxHealth * 0.25 ? '#ef4444' : '#6b7280', // Red sparks or grey smoke
+                        size: Math.random() * 3 + 1
+                    });
+                }
+            }
+
             // AI Logic
             if (!tank.isPlayer) {
                 let distToPlayer = new Vec2(this.player.x - tank.x, this.player.y - tank.y).mag();
@@ -889,6 +915,12 @@ export class GameEngine {
             p.life -= dt;
             if (p.life <= 0) this.planes.splice(i, 1);
         }
+        for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+            let s = this.shockwaves[i];
+            s.radius += s.maxRadius * dt * 2;
+            s.life -= dt;
+            if (s.life <= 0) this.shockwaves.splice(i, 1);
+        }
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             p.x += p.vx * dt;
@@ -1020,6 +1052,17 @@ export class GameEngine {
         }
     }
 
+    private spawnAirstrikeExplosion(x: number, y: number, color: string, count: number) {
+        this.spawnExplosion(x, y, color, count);
+        this.shockwaves.push({
+            x, y,
+            radius: 0,
+            maxRadius: 300,
+            life: 1.0,
+            color: 'rgba(239, 68, 68, 1)'
+        });
+    }
+
     private spawnExplosion(x: number, y: number, color: string, count: number) {
         for (let i = 0; i < count; i++) {
             let angle = Math.random() * Math.PI * 2;
@@ -1144,6 +1187,18 @@ export class GameEngine {
                     this.ctx.fillRect(Math.random()*dec.size - dec.size/2, Math.random()*dec.size - dec.size/2, 5, 5);
                 }
             }
+            this.ctx.restore();
+        }
+
+        // Draw Shockwaves
+        for (let s of this.shockwaves) {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+            // Replace alpha in rgba(r, g, b, a)
+            this.ctx.strokeStyle = s.color.replace(/[\d.]+\)$/, `${s.life})`);
+            this.ctx.lineWidth = 5 * s.life;
+            this.ctx.stroke();
             this.ctx.restore();
         }
 
@@ -1378,29 +1433,35 @@ export class GameEngine {
         this.ctx.restore();
 
         // Plane Body
-        this.ctx.fillStyle = '#1e293b'; // Dark slate
+        this.ctx.fillStyle = '#334155'; // Slightly lighter slate
         this.ctx.beginPath();
         this.ctx.moveTo(30, 0); // Nose
-        this.ctx.lineTo(-10, 40); // Right wing tip
-        this.ctx.lineTo(-20, 40);
-        this.ctx.lineTo(-10, 10); // Right wing base
-        this.ctx.lineTo(-30, 15); // Right tail tip
-        this.ctx.lineTo(-40, 15);
-        this.ctx.lineTo(-35, 0); // Tail center
-        this.ctx.lineTo(-40, -15);
-        this.ctx.lineTo(-30, -15); // Left tail tip
-        this.ctx.lineTo(-10, -10); // Left wing base
-        this.ctx.lineTo(-20, -40);
-        this.ctx.lineTo(-10, -40); // Left wing tip
+        this.ctx.lineTo(-10, 40); // Wing tip
+        this.ctx.lineTo(-20, 40); // Wing back
+        this.ctx.lineTo(-10, 10); // Body
+        this.ctx.lineTo(-30, 15); // Tail wing
+        this.ctx.lineTo(-40, 15); // Tail wing tip
+        this.ctx.lineTo(-35, 0); // Tail
+        this.ctx.lineTo(-40, -15); // Tail wing tip
+        this.ctx.lineTo(-30, -15); // Tail wing
+        this.ctx.lineTo(-10, -10); // Body
+        this.ctx.lineTo(-20, -40); // Wing back
+        this.ctx.lineTo(-10, -40); // Wing tip
         this.ctx.closePath();
         this.ctx.fill();
-        
-        // Cockpit
-        this.ctx.fillStyle = '#94a3b8';
+
+        // Engine/Detail
+        this.ctx.fillStyle = '#ef4444'; // Red detail
         this.ctx.beginPath();
-        this.ctx.ellipse(10, 0, 8, 3, 0, 0, Math.PI * 2);
+        this.ctx.arc(-5, 0, 5, 0, Math.PI * 2);
         this.ctx.fill();
-        
+
+        // Cockpit
+        this.ctx.fillStyle = '#60a5fa'; // Light blue
+        this.ctx.beginPath();
+        this.ctx.ellipse(5, 0, 8, 4, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
         this.ctx.restore();
     }
 
@@ -1427,7 +1488,9 @@ export class GameEngine {
             this.ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
         } else {
             // Base structure fallback
-            this.ctx.fillStyle = '#525252'; // Concrete gray
+            const healthPercent = obs.health / obs.maxHealth;
+            const color = healthPercent > 0.7 ? '#525252' : (healthPercent > 0.3 ? '#404040' : '#262626');
+            this.ctx.fillStyle = color; // Concrete gray
             this.ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
             
             // Ruin details (broken walls/windows)
@@ -1513,6 +1576,20 @@ export class GameEngine {
         this.ctx.roundRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6, 4);
         this.ctx.fill();
 
+        // --- Damage Dents ---
+        if (tank.health < tank.maxHealth * 0.75) {
+            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            // Draw a few "dents" based on health
+            let dentCount = Math.floor((1 - tank.health / tank.maxHealth) * 5);
+            for(let i = 0; i < dentCount; i++) {
+                let dx = (Math.sin(tank.id + i) * tank.radius * 0.8);
+                let dy = (Math.cos(tank.id + i) * tank.radius * 0.6);
+                this.ctx.beginPath();
+                this.ctx.arc(dx, dy, tank.radius * 0.2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+
         // Apply decal if present
         if (tank.customization && tank.customization.decal !== 'none') {
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
@@ -1555,6 +1632,19 @@ export class GameEngine {
         // Front indicator (white stripe)
         this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
         this.ctx.fillRect(tank.radius*0.6, -tank.radius*0.2, tank.radius*0.3, tank.radius*0.4);
+
+        // Health bar
+        if (!tank.isPlayer) {
+            const barWidth = tank.radius * 2;
+            const barHeight = 4;
+            const healthPercent = tank.health / tank.maxHealth;
+            
+            this.ctx.fillStyle = '#333';
+            this.ctx.fillRect(-tank.radius, -tank.radius * 1.5, barWidth, barHeight);
+            
+            this.ctx.fillStyle = healthPercent > 0.5 ? '#10b981' : '#ef4444'; // green or red
+            this.ctx.fillRect(-tank.radius, -tank.radius * 1.5, barWidth * healthPercent, barHeight);
+        }
         this.ctx.restore();
 
         // Reset shadow for turret
