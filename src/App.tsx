@@ -57,7 +57,8 @@ function AppInner() {
 
     const [totalCoins, setTotalCoins] = useState(0);
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy', '67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili', 'op_tank', 'secret', 'shitty']);
-    const [customization, setCustomization] = useState({ paintJob: '#10b981', decal: 'none', visualMod: 'none' });
+    const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['default']);
+    const [customization, setCustomization] = useState({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
 
@@ -90,17 +91,20 @@ function AppInner() {
                 const data = snapshot.val();
                 setTotalCoins(data.totalCoins || 0);
                 setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
-                setCustomization(data.customization || { paintJob: '#10b981', decal: 'none', visualMod: 'none' });
+                setUnlockedSkins(data.unlockedSkins || ['default']);
+                setCustomization(data.customization || { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
             } else {
                 // Initialize new user
                 await set(playerRef, {
                     totalCoins: 0,
                     unlockedTanks: ['light', 'medium', 'heavy'],
-                    customization: { paintJob: '#10b981', decal: 'none', visualMod: 'none' }
+                    unlockedSkins: ['default'],
+                    customization: { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' }
                 });
                 setTotalCoins(0);
                 setUnlockedTanks(['light', 'medium', 'heavy']);
-                setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none' });
+                setUnlockedSkins(['default']);
+                setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
             }
             setGameState('menu');
         } catch (error) {
@@ -118,6 +122,7 @@ function AppInner() {
                     await set(ref(db, `players/${username}`), {
                         totalCoins,
                         unlockedTanks,
+                        unlockedSkins,
                         customization
                     });
                     
@@ -355,18 +360,21 @@ function AppInner() {
                                         <ShieldAlert className="w-5 h-5 text-emerald-500" />
                                         Select Vehicle
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
                                         {tankStats.map(t => (
                                             <button
                                                 key={t.id}
                                                 onClick={() => setSelectedTank(t.id as any)}
-                                                className={`p-6 rounded-2xl border transition-all text-left group ${
+                                                className={`p-6 rounded-2xl border transition-all text-left relative group ${
                                                     selectedTank === t.id 
-                                                    ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
-                                                    : 'bg-neutral-900/50 border-white/5 hover:border-white/20'
+                                                    ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)] scale-[1.02]' 
+                                                    : 'bg-neutral-950/50 border-white/5 hover:border-emerald-500/30 hover:bg-neutral-900'
                                                 }`}
                                             >
-                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-neutral-400 transition-colors">{t.desc}</p>
+                                                {selectedTank === t.id && (
+                                                    <div className="absolute top-3 right-3 w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                                                )}
+                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-emerald-400 transition-colors">{t.desc}</p>
                                                 <h4 className="text-xl font-bold mb-4">{t.name}</h4>
                                                 <ul className="text-[10px] uppercase tracking-wider space-y-1">
                                                     <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
@@ -381,6 +389,14 @@ function AppInner() {
                                             Customize Tank
                                         </h3>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Skin</label>
+                                                <select value={customization.skin} onChange={(e) => setCustomization(prev => ({ ...prev, skin: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                    {unlockedSkins.map(skin => (
+                                                        <option key={skin} value={skin}>{skin.charAt(0).toUpperCase() + skin.slice(1)}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Paint Job</label>
                                                 <div className="relative group">
@@ -435,7 +451,7 @@ function AppInner() {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
                                         {brainrotStats.map(t => (
                                             <button
                                                 key={t.id}
@@ -444,16 +460,19 @@ function AppInner() {
                                                 className={`p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
                                                     !unlockedTanks.includes(t.id) ? 'opacity-40 grayscale cursor-not-allowed' :
                                                     selectedTank === t.id 
-                                                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_20px_rgba(245,158,11,0.1)]' 
-                                                    : 'bg-neutral-900/50 border-white/5 hover:border-white/20'
+                                                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] scale-[1.02]' 
+                                                    : 'bg-neutral-950/50 border-white/5 hover:border-yellow-500/30 hover:bg-neutral-900'
                                                 }`}
                                             >
+                                                {selectedTank === t.id && (
+                                                    <div className="absolute top-3 right-3 w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />
+                                                )}
                                                 {!unlockedTanks.includes(t.id) && (
                                                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
                                                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-white/20 px-2 py-1">LOCKED</span>
                                                     </div>
                                                 )}
-                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">{t.desc}</p>
+                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-yellow-400 transition-colors">{t.desc}</p>
                                                 <h4 className="text-xl font-bold mb-4">{t.name}</h4>
                                                 <ul className="text-[10px] uppercase tracking-wider space-y-1">
                                                     <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
@@ -469,7 +488,7 @@ function AppInner() {
                                         <ShieldAlert className="w-5 h-5 text-red-500" />
                                         Classified Prototypes
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
                                         {opStats.map(t => (
                                             <button
                                                 key={t.id}
@@ -478,16 +497,19 @@ function AppInner() {
                                                 className={`p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
                                                     !unlockedTanks.includes(t.id) ? 'opacity-40 grayscale cursor-not-allowed' :
                                                     selectedTank === t.id 
-                                                    ? 'bg-red-500/10 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]' 
-                                                    : 'bg-neutral-900/50 border-white/5 hover:border-white/20'
+                                                    ? 'bg-red-500/10 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)] scale-[1.02]' 
+                                                    : 'bg-neutral-950/50 border-white/5 hover:border-red-500/30 hover:bg-neutral-900'
                                                 }`}
                                             >
+                                                {selectedTank === t.id && (
+                                                    <div className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                                                )}
                                                 {!unlockedTanks.includes(t.id) && (
                                                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
                                                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-white/20 px-2 py-1">LOCKED</span>
                                                     </div>
                                                 )}
-                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">{t.desc}</p>
+                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-red-400 transition-colors">{t.desc}</p>
                                                 <h4 className="text-xl font-bold mb-4">{t.name}</h4>
                                                 <ul className="text-[10px] uppercase tracking-wider space-y-1">
                                                     <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
@@ -727,7 +749,7 @@ function AppInner() {
                                     stickColor="rgba(255,255,255,0.5)" 
                                     move={(e) => {
                                         if (engineRef.current && typeof e.x === 'number' && typeof e.y === 'number') {
-                                            engineRef.current.setMobileMove(e.x, -e.y);
+                                            engineRef.current.setMobileMove(e.x / 60, -e.y / 60);
                                         }
                                     }} 
                                     stop={() => {
@@ -743,7 +765,7 @@ function AppInner() {
                                     stickColor="rgba(239,68,68,0.5)" 
                                     move={(e) => {
                                         if (engineRef.current && typeof e.x === 'number' && typeof e.y === 'number') {
-                                            engineRef.current.setMobileAim(e.x, -e.y);
+                                            engineRef.current.setMobileAim(e.x / 60, -e.y / 60);
                                             engineRef.current.setMobileFire(true);
                                         }
                                     }} 

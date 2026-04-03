@@ -4,6 +4,7 @@ export type Customization = {
     paintJob: string;
     decal: string;
     visualMod: string;
+    skin: string;
 };
 
 export type Tank = {
@@ -208,6 +209,8 @@ export class GameEngine {
     }
 
     private init() {
+        this.spawnTimer = 1.0;
+        
         // Balanced Medium Tank (Default)
         let radius = 20, health = 180, speed = 225, turn = 3.0, turretTurn = 5.0, reload = 1.1, damage = 45, maxAmmo = 50;
         
@@ -725,6 +728,20 @@ export class GameEngine {
             tank.x += Math.cos(tank.hullAngle) * tank.speed * dt;
             tank.y += Math.sin(tank.hullAngle) * tank.speed * dt;
 
+            // Dust particles
+            if (tank.speed > 50 && Math.random() < 0.2) {
+                this.particles.push({
+                    x: tank.x - Math.cos(tank.hullAngle) * tank.radius,
+                    y: tank.y - Math.sin(tank.hullAngle) * tank.radius,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                    life: 0.3 + Math.random() * 0.2,
+                    maxLife: 0.5,
+                    color: '#a3a3a3',
+                    size: Math.random() * 2 + 1
+                });
+            }
+
             // --- Damage Effects ---
             if (tank.health < tank.maxHealth * 0.5) {
                 // Spawn smoke/sparks
@@ -1066,15 +1083,16 @@ export class GameEngine {
     private spawnExplosion(x: number, y: number, color: string, count: number) {
         for (let i = 0; i < count; i++) {
             let angle = Math.random() * Math.PI * 2;
-            let speed = Math.random() * 100 + 50;
+            let speed = Math.random() * 150 + 50;
+            let size = Math.random() * 8 + 3;
             this.particles.push({
                 x, y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                life: Math.random() * 0.3 + 0.1,
-                maxLife: 0.4,
+                life: Math.random() * 0.5 + 0.2,
+                maxLife: 0.7,
                 color: color,
-                size: Math.random() * 6 + 2
+                size: size
             });
             // Add smoke
             if (Math.random() > 0.5) {
@@ -1561,7 +1579,8 @@ export class GameEngine {
         
         // Tread details (lines)
         this.ctx.fillStyle = '#262626';
-        for(let i = -tank.radius; i < tank.radius; i += 6) {
+        let offset = (performance.now() / 50 * (tank.speed / tank.maxSpeed)) % 6;
+        for(let i = -tank.radius + offset; i < tank.radius; i += 6) {
             this.ctx.fillRect(i, -tank.radius, 2, tank.radius*0.4);
             this.ctx.fillRect(i, tank.radius*0.6, 2, tank.radius*0.4);
         }
@@ -1633,18 +1652,6 @@ export class GameEngine {
         this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
         this.ctx.fillRect(tank.radius*0.6, -tank.radius*0.2, tank.radius*0.3, tank.radius*0.4);
 
-        // Health bar
-        if (!tank.isPlayer) {
-            const barWidth = tank.radius * 2;
-            const barHeight = 4;
-            const healthPercent = tank.health / tank.maxHealth;
-            
-            this.ctx.fillStyle = '#333';
-            this.ctx.fillRect(-tank.radius, -tank.radius * 1.5, barWidth, barHeight);
-            
-            this.ctx.fillStyle = healthPercent > 0.5 ? '#10b981' : '#ef4444'; // green or red
-            this.ctx.fillRect(-tank.radius, -tank.radius * 1.5, barWidth * healthPercent, barHeight);
-        }
         this.ctx.restore();
 
         // Reset shadow for turret
@@ -1673,6 +1680,13 @@ export class GameEngine {
         this.ctx.arc(0, 0, tank.radius * 0.6, 0, Math.PI * 2);
         this.ctx.fill();
         
+        // Turret glow
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+        this.ctx.shadowBlur = 10;
+        this.ctx.stroke();
+        this.ctx.shadowBlur = 0; // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        
         // Turret camo
         this.ctx.save();
         this.ctx.clip();
@@ -1700,13 +1714,19 @@ export class GameEngine {
         this.ctx.shadowBlur = 0;
         this.ctx.shadowOffsetX = 0;
         this.ctx.shadowOffsetY = 0;
+        this.ctx.shadowColor = 'transparent';
 
-        // Health bar (only for enemies)
+        // Health bar (drawn horizontally, no shadow)
         if (!tank.isPlayer) {
-            this.ctx.fillStyle = '#ef4444';
-            this.ctx.fillRect(-15, -tank.radius - 15, 30, 4);
-            this.ctx.fillStyle = '#10b981';
-            this.ctx.fillRect(-15, -tank.radius - 15, 30 * (tank.health / tank.maxHealth), 4);
+            const barWidth = tank.radius * 2;
+            const barHeight = 4;
+            const healthPercent = tank.health / tank.maxHealth;
+            
+            this.ctx.fillStyle = '#333';
+            this.ctx.fillRect(-tank.radius, -tank.radius * 1.5, barWidth, barHeight);
+            
+            this.ctx.fillStyle = healthPercent > 0.5 ? '#10b981' : '#ef4444'; // green or red
+            this.ctx.fillRect(-tank.radius, -tank.radius * 1.5, barWidth * healthPercent, barHeight);
         }
 
         this.ctx.restore();
