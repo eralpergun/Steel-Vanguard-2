@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, useNavigate, useLocation, Link } from 'react-router-dom';
 import { GameEngine } from './game/Engine';
 import Privacy from './pages/Privacy';
+import About from './pages/About';
 
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
@@ -28,14 +29,14 @@ function AppInner() {
     const location = useLocation();
 
     useEffect(() => {
-        if (location.pathname === '/gizlilik-politikasi') return;
+        if (location.pathname === '/gizlilik-politikasi' || location.pathname === '/hakkimizda') return;
         if (gameState === 'login' && location.pathname !== '/login') navigate('/login');
         else if (gameState === 'menu' && location.pathname !== '/') navigate('/');
         else if ((gameState === 'playing' || gameState === 'gameover') && location.pathname !== '/war') navigate('/war');
     }, [gameState, navigate, location.pathname]);
 
     useEffect(() => {
-        if (location.pathname === '/gizlilik-politikasi') return;
+        if (location.pathname === '/gizlilik-politikasi' || location.pathname === '/hakkimizda') return;
         if (location.pathname === '/login' && gameState !== 'login') setGameState('login');
         else if (location.pathname === '/' && gameState !== 'menu') setGameState('menu');
         else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
@@ -280,6 +281,9 @@ function AppInner() {
     if (location.pathname === '/gizlilik-politikasi') {
         return <Privacy />;
     }
+    if (location.pathname === '/hakkimizda') {
+        return <About />;
+    }
 
     return (
         <div className="min-h-screen bg-neutral-950 text-white overflow-hidden font-sans selection:bg-emerald-500/30">
@@ -320,7 +324,9 @@ function AppInner() {
                             </button>
                         </form>
                     </div>
-                    <div className="absolute bottom-6 w-full text-center">
+                    <div className="absolute bottom-6 w-full text-center flex justify-center items-center gap-4">
+                        <Link to="/hakkimizda" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Hakkımızda</Link>
+                        <span className="text-neutral-700 text-xs">•</span>
                         <Link to="/gizlilik-politikasi" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Gizlilik Politikası</Link>
                     </div>
                 </div>
@@ -668,7 +674,9 @@ function AppInner() {
                             </div>
                         </div>
                         
-                        <div className="mt-12 pt-8 border-t border-white/5 text-center">
+                        <div className="mt-12 pt-8 border-t border-white/5 text-center flex justify-center items-center gap-4">
+                            <Link to="/hakkimizda" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Hakkımızda</Link>
+                            <span className="text-neutral-700 text-xs">•</span>
                             <Link to="/gizlilik-politikasi" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Gizlilik Politikası</Link>
                         </div>
                     </div>
