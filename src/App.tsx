@@ -46,7 +46,7 @@ function AppInner() {
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
     const [customEnemyCount, setCustomEnemyCount] = useState<number | ''>('');
-    const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false });
+    const [uiState, setUiState] = useState<{ health: number, maxHealth: number, reloadProgress: number, score: number, isPaused: boolean, ammo: number, maxAmmo: number, airstrikeCooldown: number, isRegenerating: boolean, mission?: any }>({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
 
@@ -749,9 +749,26 @@ function AppInner() {
                             )}
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-right flex flex-col items-end">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1">Combat Score</p>
                             <p className="text-5xl font-black font-mono text-white tracking-tighter">{(uiState.score || 0).toLocaleString()}</p>
+                            
+                            {uiState.mission && (
+                                <div className="mt-6 bg-black/60 backdrop-blur-md border border-emerald-500/30 p-4 rounded-2xl w-64 text-left">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Target className="w-4 h-4 text-emerald-500" />
+                                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Active Mission</span>
+                                    </div>
+                                    <h3 className="font-bold text-white mb-1">{uiState.mission.title}</h3>
+                                    <p className="text-[10px] text-neutral-400 mb-3">{uiState.mission.rewardDesc}</p>
+                                    <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-emerald-500 transition-all duration-300" 
+                                            style={{ width: `${Math.min(100, Math.max(0, uiState.mission.progress))}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

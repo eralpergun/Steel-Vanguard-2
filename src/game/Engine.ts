@@ -46,6 +46,7 @@ export type Projectile = {
 };
 
 export type Obstacle = {
+    id?: number;
     x: number; y: number;
     w: number; h: number;
     type: 'building' | 'ruin' | 'wall';
@@ -91,6 +92,17 @@ export type Item = {
     life: number;
 };
 
+export type Mission = {
+    type: 'capture' | 'destroy';
+    x: number; y: number;
+    radius?: number;
+    targetId?: number;
+    progress: number;
+    active: boolean;
+    title: string;
+    rewardDesc: string;
+};
+
 export class GameEngine {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
@@ -115,6 +127,9 @@ export class GameEngine {
     private floatingTexts: FloatingText[] = [];
     private items: Item[] = [];
     private shockwaves: Shockwave[] = [];
+
+    public currentMission: Mission | null = null;
+    private missionSpawnTimer: number = 10; // First mission after 10 seconds
 
     public isPaused: boolean = false;
     private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
@@ -662,10 +677,11 @@ export class GameEngine {
         }
         
         let shouldSpawn = false;
+        const activeEnemiesCount = this.enemies.filter(e => e.type !== 'modular').length;
         if (isCustomMode) {
-            shouldSpawn = this.enemies.length < maxEnemies;
+            shouldSpawn = activeEnemiesCount < maxEnemies;
         } else {
-            shouldSpawn = this.spawnTimer <= 0 && this.enemies.length < maxEnemies;
+            shouldSpawn = this.spawnTimer <= 0 && activeEnemiesCount < maxEnemies;
         }
 
         while (shouldSpawn) {
@@ -724,7 +740,8 @@ export class GameEngine {
             });
 
             if (isCustomMode) {
-                shouldSpawn = this.enemies.length < maxEnemies;
+                const currentActiveEnemiesCount = this.enemies.filter(e => e.type !== 'modular').length;
+                shouldSpawn = currentActiveEnemiesCount < maxEnemies;
             } else {
                 shouldSpawn = false; // Only spawn one per frame if not custom
             }
@@ -803,7 +820,10 @@ export class GameEngine {
                 let currentMaxSpeed = tank.maxSpeed * (tank.speedBuffTimer > 0 ? 1.5 : 1.0) * healthFactor;
 
                 // Behavior based on type
-                if (tank.type === 'scout') {
+                if (tank.type === 'modular') {
+                    // Modular tanks don't move, they just aim and shoot
+                    tank.speed = 0;
+                } else if (tank.type === 'scout') {
                     // Flanking behavior
                     let flankAngle = aiTargetAngle + (Math.random() > 0.5 ? Math.PI / 4 : -Math.PI / 4);
                     if (distToPlayer > 300) {
@@ -1030,6 +1050,142 @@ export class GameEngine {
             }
         }
 
+        // --- Mission Logic ---
+        if (!this.currentMission) {
+            this.missionSpawnTimer -= dt;
+            if (this.missionSpawnTimer <= 0) {
+                const isCapture = Math.random() > 0.5;
+                const spawnDist = Math.random() * 500 + 500; // 500 to 1000 pixels away
+                const spawnAngle = Math.random() * Math.PI * 2;
+                const spawnX = this.player.x + Math.cos(spawnAngle) * spawnDist;
+                const spawnY = this.player.y + Math.sin(spawnAngle) * spawnDist;
+
+                if (isCapture) {
+                    this.currentMission = {
+                        type: 'capture',
+                        x: spawnX,
+                        y: spawnY,
+                        radius: 150,
+                        progress: 0,
+                        active: true,
+                        title: 'Capture the Zone',
+                        rewardDesc: '+1000 Score & Full Heal'
+                    };
+                    
+                    // Spawn 1 modular tank at the capture zone
+                    this.enemies.push({
+                        id: this.nextId++,
+                        type: 'modular',
+                        x: spawnX,
+                        y: spawnY,
+                        radius: 25,
+                        hullAngle: 0, turretAngle: 0,
+                        speed: 0, maxSpeed: 0,
+                        turnSpeed: 0, turretTurnSpeed: 3.0,
+                        health: 300, maxHealth: 300,
+                        reloadTimer: 0, reloadTime: 1.5,
+                        speedBuffTimer: 0,
+                        damage: 40,
+                        armorFront: 1.0, armorSide: 1.0, armorRear: 1.0,
+                        ammo: 999, maxAmmo: 999,
+                        isPlayer: false,
+                        lastDamageTime: 0,
+                        color: '#8b5cf6' // Purple
+                    });
+                } else {
+                    const targetId = this.nextId++;
+                    const targetObstacle: Obstacle = {
+                        id: targetId,
+                        x: spawnX - 50,
+                        y: spawnY - 50,
+                        w: 100, h: 100,
+                        type: 'building',
+                        health: 1500,
+                        maxHealth: 1500
+                    };
+                    this.obstacles.push(targetObstacle);
+                    this.currentMission = {
+                        type: 'destroy',
+                        x: spawnX,
+                        y: spawnY,
+                        targetId: targetId,
+                        progress: 0,
+                        active: true,
+                        title: 'Destroy Enemy Base',
+                        rewardDesc: '+1500 Score & Airstrike Ready'
+                    };
+                    
+                    // Spawn 2 modular tanks at the enemy base
+                    this.enemies.push({
+                        id: this.nextId++,
+                        type: 'modular',
+                        x: spawnX - 70,
+                        y: spawnY,
+                        radius: 25,
+                        hullAngle: 0, turretAngle: 0,
+                        speed: 0, maxSpeed: 0,
+                        turnSpeed: 0, turretTurnSpeed: 3.0,
+                        health: 300, maxHealth: 300,
+                        reloadTimer: 0, reloadTime: 1.5,
+                        speedBuffTimer: 0,
+                        damage: 40,
+                        armorFront: 1.0, armorSide: 1.0, armorRear: 1.0,
+                        ammo: 999, maxAmmo: 999,
+                        isPlayer: false,
+                        lastDamageTime: 0,
+                        color: '#8b5cf6' // Purple
+                    });
+                    this.enemies.push({
+                        id: this.nextId++,
+                        type: 'modular',
+                        x: spawnX + 70,
+                        y: spawnY,
+                        radius: 25,
+                        hullAngle: 0, turretAngle: 0,
+                        speed: 0, maxSpeed: 0,
+                        turnSpeed: 0, turretTurnSpeed: 3.0,
+                        health: 300, maxHealth: 300,
+                        reloadTimer: 0, reloadTime: 1.5,
+                        speedBuffTimer: 0,
+                        damage: 40,
+                        armorFront: 1.0, armorSide: 1.0, armorRear: 1.0,
+                        ammo: 999, maxAmmo: 999,
+                        isPlayer: false,
+                        lastDamageTime: 0,
+                        color: '#8b5cf6' // Purple
+                    });
+                }
+            }
+        } else {
+            if (this.currentMission.type === 'capture') {
+                const dist = Math.hypot(this.player.x - this.currentMission.x, this.player.y - this.currentMission.y);
+                if (dist < (this.currentMission.radius || 150)) {
+                    this.currentMission.progress += dt * 10; // 10 seconds to capture
+                    if (this.currentMission.progress >= 100) {
+                        this.score += 1000;
+                        this.player.health = this.player.maxHealth;
+                        this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'MISSION COMPLETE!', life: 2.0, maxLife: 2.0, color: '#10b981' });
+                        this.currentMission = null;
+                        this.missionSpawnTimer = 20;
+                    }
+                } else {
+                    this.currentMission.progress -= dt * 5;
+                    if (this.currentMission.progress < 0) this.currentMission.progress = 0;
+                }
+            } else if (this.currentMission.type === 'destroy') {
+                const target = this.obstacles.find(o => o.id === this.currentMission!.targetId);
+                if (target) {
+                    this.currentMission.progress = 100 - (target.health / target.maxHealth) * 100;
+                } else {
+                    this.score += 1500;
+                    this.airstrikeCooldown = 0;
+                    this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'BASE DESTROYED!', life: 2.0, maxLife: 2.0, color: '#10b981' });
+                    this.currentMission = null;
+                    this.missionSpawnTimer = 20;
+                }
+            }
+        }
+
         // Screen shake decay
         if (this.shakeAmount > 0) {
             this.shakeAmount -= dt * 30;
@@ -1050,7 +1206,8 @@ export class GameEngine {
             ammo: this.player.ammo,
             maxAmmo: this.player.maxAmmo,
             airstrikeCooldown: Math.max(0, this.airstrikeCooldown),
-            isRegenerating: performance.now() - this.player.lastDamageTime > 5000 && this.player.health < this.player.maxHealth
+            isRegenerating: performance.now() - this.player.lastDamageTime > 5000 && this.player.health < this.player.maxHealth,
+            mission: this.currentMission
         });
     }
 
@@ -1279,6 +1436,54 @@ export class GameEngine {
             this.drawRuin(obs);
         }
 
+        // Draw Mission
+        if (this.currentMission) {
+            if (this.currentMission.type === 'capture') {
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.arc(this.currentMission.x, this.currentMission.y, this.currentMission.radius || 150, 0, Math.PI * 2);
+                this.ctx.fillStyle = `rgba(16, 185, 129, ${0.1 + Math.sin(performance.now() / 200) * 0.05})`; // Pulse emerald
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#10b981';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([10, 10]);
+                this.ctx.stroke();
+                
+                // Draw progress ring
+                if (this.currentMission.progress > 0) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.currentMission.x, this.currentMission.y, (this.currentMission.radius || 150) + 5, -Math.PI/2, -Math.PI/2 + (this.currentMission.progress / 100) * Math.PI * 2);
+                    this.ctx.strokeStyle = '#34d399';
+                    this.ctx.lineWidth = 4;
+                    this.ctx.setLineDash([]);
+                    this.ctx.stroke();
+                }
+                
+                this.ctx.fillStyle = '#10b981';
+                this.ctx.font = 'bold 14px monospace';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('CAPTURE ZONE', this.currentMission.x, this.currentMission.y);
+                this.ctx.restore();
+            } else if (this.currentMission.type === 'destroy') {
+                const target = this.obstacles.find(o => o.id === this.currentMission!.targetId);
+                if (target) {
+                    this.ctx.save();
+                    this.ctx.beginPath();
+                    this.ctx.arc(target.x + target.w/2, target.y + target.h/2, Math.max(target.w, target.h) + 10, 0, Math.PI * 2);
+                    this.ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 + Math.sin(performance.now() / 150) * 0.5})`; // Pulse red
+                    this.ctx.lineWidth = 3;
+                    this.ctx.setLineDash([15, 15]);
+                    this.ctx.stroke();
+                    
+                    this.ctx.fillStyle = '#ef4444';
+                    this.ctx.font = 'bold 14px monospace';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('TARGET', target.x + target.w/2, target.y - 10);
+                    this.ctx.restore();
+                }
+            }
+        }
+
         // Draw Items
         for (let item of this.items) {
             this.ctx.save();
@@ -1451,6 +1656,57 @@ export class GameEngine {
         }
 
         this.ctx.restore();
+
+        // Draw Off-Screen Mission Indicator
+        if (this.currentMission && this.currentMission.active) {
+            const screenX = this.currentMission.x - this.camX;
+            const screenY = this.currentMission.y - this.camY;
+            
+            // Check if off-screen
+            const margin = 50;
+            if (screenX < margin || screenX > this.canvas.width - margin || 
+                screenY < margin || screenY > this.canvas.height - margin) {
+                
+                // Calculate intersection with screen bounds
+                const cx = this.canvas.width / 2;
+                const cy = this.canvas.height / 2;
+                const angle = Math.atan2(screenY - cy, screenX - cx);
+                
+                let indX = cx + Math.cos(angle) * (cx - margin);
+                let indY = cy + Math.sin(angle) * (cy - margin);
+                
+                // Clamp to screen bounds
+                indX = Math.max(margin, Math.min(this.canvas.width - margin, indX));
+                indY = Math.max(margin, Math.min(this.canvas.height - margin, indY));
+                
+                this.ctx.save();
+                this.ctx.translate(indX, indY);
+                this.ctx.rotate(angle);
+                
+                // Draw arrow
+                this.ctx.beginPath();
+                this.ctx.moveTo(15, 0);
+                this.ctx.lineTo(-10, 10);
+                this.ctx.lineTo(-5, 0);
+                this.ctx.lineTo(-10, -10);
+                this.ctx.closePath();
+                
+                this.ctx.fillStyle = '#10b981'; // emerald-500
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#047857'; // emerald-700
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                // Draw pulsing glow
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, 20 + Math.sin(performance.now() / 150) * 5, 0, Math.PI * 2);
+                this.ctx.strokeStyle = `rgba(16, 185, 129, ${0.3 + Math.sin(performance.now() / 150) * 0.2})`;
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                this.ctx.restore();
+            }
+        }
 
         // Draw Vignette Effect
         const gradient = this.ctx.createRadialGradient(
