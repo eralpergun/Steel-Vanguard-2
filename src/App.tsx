@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, useNavigate, useLocation, Link } from 'react-router-dom';
 import { GameEngine } from './game/Engine';
+import Privacy from './pages/Privacy';
 
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
@@ -27,12 +28,14 @@ function AppInner() {
     const location = useLocation();
 
     useEffect(() => {
+        if (location.pathname === '/gizlilik-politikasi') return;
         if (gameState === 'login' && location.pathname !== '/login') navigate('/login');
         else if (gameState === 'menu' && location.pathname !== '/') navigate('/');
         else if ((gameState === 'playing' || gameState === 'gameover') && location.pathname !== '/war') navigate('/war');
     }, [gameState, navigate, location.pathname]);
 
     useEffect(() => {
+        if (location.pathname === '/gizlilik-politikasi') return;
         if (location.pathname === '/login' && gameState !== 'login') setGameState('login');
         else if (location.pathname === '/' && gameState !== 'menu') setGameState('menu');
         else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
@@ -42,7 +45,7 @@ function AppInner() {
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
     const [customEnemyCount, setCustomEnemyCount] = useState<number | ''>('');
-    const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0 });
+    const [uiState, setUiState] = useState({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
 
@@ -274,6 +277,10 @@ function AppInner() {
     const allTanks = [...tankStats, ...brainrotStats, ...opStats];
     const currentTankStats = allTanks.find(t => t.id === selectedTank);
 
+    if (location.pathname === '/gizlilik-politikasi') {
+        return <Privacy />;
+    }
+
     return (
         <div className="min-h-screen bg-neutral-950 text-white overflow-hidden font-sans selection:bg-emerald-500/30">
             {gameState === 'login' && (
@@ -312,6 +319,9 @@ function AppInner() {
                                 {isLoggingIn ? 'CONNECTING...' : 'INITIALIZE SYSTEM'}
                             </button>
                         </form>
+                    </div>
+                    <div className="absolute bottom-6 w-full text-center">
+                        <Link to="/gizlilik-politikasi" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Gizlilik Politikası</Link>
                     </div>
                 </div>
             )}
@@ -657,6 +667,10 @@ function AppInner() {
                                 </button>
                             </div>
                         </div>
+                        
+                        <div className="mt-12 pt-8 border-t border-white/5 text-center">
+                            <Link to="/gizlilik-politikasi" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Gizlilik Politikası</Link>
+                        </div>
                     </div>
                 </div>
             )}
@@ -678,10 +692,15 @@ function AppInner() {
                                 </div>
                                 <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
                                     <div 
-                                        className="h-full bg-emerald-500 transition-all duration-300" 
+                                        className={`h-full transition-all duration-300 ${uiState.isRegenerating ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-500'}`} 
                                         style={{ width: `${(uiState.health / uiState.maxHealth) * 100}%` }}
                                     />
                                 </div>
+                                {uiState.isRegenerating && (
+                                    <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-emerald-400 animate-pulse">
+                                        Regenerating...
+                                    </div>
+                                )}
                             </div>
                             
                             <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-64">

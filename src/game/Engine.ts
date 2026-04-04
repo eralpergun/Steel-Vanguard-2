@@ -22,7 +22,11 @@ export type Tank = {
     reloadTimer: number;
     reloadTime: number;
     speedBuffTimer: number;
+    lastDamageTime: number;
     damage: number;
+    armorFront: number;
+    armorSide: number;
+    armorRear: number;
     ammo: number;
     maxAmmo: number;
     isPlayer: boolean;
@@ -262,7 +266,11 @@ export class GameEngine {
             health: health, maxHealth: health,
             reloadTimer: 0, reloadTime: reload,
             speedBuffTimer: 0,
+            lastDamageTime: 0,
             damage: damage,
+            armorFront: 0.8,
+            armorSide: 1.0,
+            armorRear: 1.5,
             ammo: maxAmmo,
             maxAmmo: maxAmmo,
             isPlayer: true,
@@ -705,9 +713,14 @@ export class GameEngine {
                 reloadTimer: 0, reloadTime: enemyReload,
                 speedBuffTimer: 0,
                 damage: enemyDamage,
+                armorFront: 0.8,
+                armorSide: 1.0,
+                armorRear: 1.5,
                 ammo: 999, // Enemies have infinite ammo for now
                 maxAmmo: 999,
-                isPlayer: false, color: type === 'scout' ? '#3b82f6' : (type === 'sniper' ? '#f59e0b' : '#ef4444') // blue, amber, red
+                isPlayer: false,
+                lastDamageTime: 0,
+                color: type === 'scout' ? '#3b82f6' : (type === 'sniper' ? '#f59e0b' : '#ef4444') // blue, amber, red
             });
 
             if (isCustomMode) {
@@ -723,6 +736,13 @@ export class GameEngine {
         allTanks.forEach(tank => {
             tank.reloadTimer -= dt;
             tank.speedBuffTimer -= dt;
+
+            // Health regeneration
+            if (performance.now() - tank.lastDamageTime > 5000) {
+                if (tank.health < tank.maxHealth) {
+                    tank.health = Math.min(tank.health + 1.0 * dt, tank.maxHealth);
+                }
+            }
 
             // Move
             tank.x += Math.cos(tank.hullAngle) * tank.speed * dt;
@@ -740,6 +760,22 @@ export class GameEngine {
                     color: '#a3a3a3',
                     size: Math.random() * 2 + 1
                 });
+            }
+
+            // Smoke trails for damaged player
+            if (tank.isPlayer && tank.speed > 50 && tank.health < tank.maxHealth * 0.75) {
+                if (Math.random() < 0.3) {
+                    this.particles.push({
+                        x: tank.x - Math.cos(tank.hullAngle) * tank.radius,
+                        y: tank.y - Math.sin(tank.hullAngle) * tank.radius,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        life: 1.0 + Math.random() * 0.5,
+                        maxLife: 1.5,
+                        color: '#404040',
+                        size: Math.random() * 4 + 2
+                    });
+                }
             }
 
             // --- Damage Effects ---
@@ -886,23 +922,24 @@ export class GameEngine {
                         let color = "#fff";
 
                         if (dot > 0.6) {
-                            damageMult = 0.2; // Front armor bounces/resists
-                            hitText = "RICOCHET";
+                            damageMult = tank.armorFront;
+                            hitText = "FRONT HIT";
                             color = "#a3a3a3";
                             this.spawnExplosion(p.x, p.y, '#fbbf24', 3); // sparks
                         } else if (dot < -0.6) {
-                            damageMult = 2.0; // Rear armor weak
-                            hitText = "CRITICAL HIT";
+                            damageMult = tank.armorRear;
+                            hitText = "REAR HIT";
                             color = "#ef4444";
                             this.spawnExplosion(p.x, p.y, '#ef4444', 10);
                         } else {
-                            damageMult = 1.0; // Side
-                            hitText = "PENETRATION";
+                            damageMult = tank.armorSide;
+                            hitText = "SIDE HIT";
                             color = "#fcd34d";
                             this.spawnExplosion(p.x, p.y, '#f97316', 8);
                         }
 
                         tank.health -= p.damage * damageMult;
+                        tank.lastDamageTime = performance.now();
                         this.floatingTexts.push({
                             x: tank.x, y: tank.y - 30,
                             text: hitText,
@@ -967,7 +1004,8 @@ export class GameEngine {
                 health: 0,
                 airstrikeCooldown: 0,
                 ammo: this.player.ammo,
-                maxAmmo: this.player.maxAmmo
+                maxAmmo: this.player.maxAmmo,
+                isRegenerating: false
             });
             this.stop();
             return;
@@ -1011,7 +1049,8 @@ export class GameEngine {
             isPaused: this.isPaused,
             ammo: this.player.ammo,
             maxAmmo: this.player.maxAmmo,
-            airstrikeCooldown: Math.max(0, this.airstrikeCooldown)
+            airstrikeCooldown: Math.max(0, this.airstrikeCooldown),
+            isRegenerating: performance.now() - this.player.lastDamageTime > 5000 && this.player.health < this.player.maxHealth
         });
     }
 
@@ -1594,6 +1633,15 @@ export class GameEngine {
         this.ctx.beginPath();
         this.ctx.roundRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6, 4);
         this.ctx.fill();
+
+        // Regeneration indicator
+        if (performance.now() - tank.lastDamageTime > 5000 && tank.health < tank.maxHealth) {
+            this.ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, tank.radius * 1.2, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
 
         // --- Damage Dents ---
         if (tank.health < tank.maxHealth * 0.75) {
