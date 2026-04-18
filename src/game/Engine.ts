@@ -7,6 +7,13 @@ export type Customization = {
     skin: string;
 };
 
+export type Upgrades = {
+    health: number;
+    speed: number;
+    damage: number;
+    reload: number;
+};
+
 export type Tank = {
     id: number;
     x: number; y: number;
@@ -193,11 +200,12 @@ export class GameEngine {
 
     private difficulty: 'easy' | 'normal' | 'hard' | 'custom';
     private customEnemyCount?: number;
+    private upgrades: Upgrades;
 
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank' | 'bulldog' | 'phantom' | 'titan' | 'wasp' | 'paladin' | 'vortex', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customization: Customization, customEnemyCount?: number) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank' | 'bulldog' | 'phantom' | 'titan' | 'wasp' | 'paladin' | 'vortex', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customization: Customization, customEnemyCount?: number, upgrades?: Upgrades) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -205,6 +213,7 @@ export class GameEngine {
         this.onUpdateUI = onUpdateUI;
         this.customization = customization;
         this.customEnemyCount = customEnemyCount;
+        this.upgrades = upgrades || { health: 0, speed: 0, damage: 0, reload: 0 };
 
         this.loadTextures();
         this.init();
@@ -290,6 +299,12 @@ export class GameEngine {
         } else if (this.playerTankType === 'vortex') {
             radius = 22; health = 300; speed = 280; turn = 4.0; turretTurn = 5.5; reload = 1.2; damage = 75; maxAmmo = 65;
         }
+
+        // Apply Player Upgrades
+        health = health * (1 + this.upgrades.health * 0.1); // +10% per level
+        speed = speed * (1 + this.upgrades.speed * 0.05); // +5% per level
+        damage = damage * (1 + this.upgrades.damage * 0.05); // +5% per level
+        reload = reload * Math.pow(0.95, this.upgrades.reload); // -5% per level
 
         this.player = {
             id: this.nextId++,

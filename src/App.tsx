@@ -67,6 +67,7 @@ function AppInner() {
     const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
     const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['default']);
     const [customization, setCustomization] = useState({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
+    const [upgrades, setUpgrades] = useState({ health: 0, speed: 0, damage: 0, reload: 0 });
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
 
@@ -127,6 +128,7 @@ function AppInner() {
                         totalCoins: 0,
                         unlockedTanks: ['light', 'medium', 'heavy'],
                         unlockedSkins: ['default'],
+                        upgrades: { health: 0, speed: 0, damage: 0, reload: 0 },
                         customization: { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' }
                     });
                     setIsGuest(false);
@@ -134,6 +136,7 @@ function AppInner() {
                     setTotalCoins(0);
                     setUnlockedTanks(['light', 'medium', 'heavy']);
                     setUnlockedSkins(['default']);
+                    setUpgrades({ health: 0, speed: 0, damage: 0, reload: 0 });
                     setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
 
                 } else if (mode === 'login') {
@@ -155,6 +158,7 @@ function AppInner() {
                     setTotalCoins(data.totalCoins || 0);
                     setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
                     setUnlockedSkins(data.unlockedSkins || ['default']);
+                    setUpgrades(data.upgrades || { health: 0, speed: 0, damage: 0, reload: 0 });
                     setCustomization(data.customization || { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
                 }
             }
@@ -177,6 +181,7 @@ function AppInner() {
                         totalCoins,
                         unlockedTanks,
                         unlockedSkins,
+                        upgrades,
                         customization
                     });
                     
@@ -190,7 +195,7 @@ function AppInner() {
             };
             saveData();
         }
-    }, [totalCoins, unlockedTanks, username, gameState, isGuest]);
+    }, [totalCoins, unlockedTanks, username, gameState, isGuest, upgrades, customization]);
 
     const handleSignOut = async () => {
         try {
@@ -322,6 +327,28 @@ function AppInner() {
         setTimeout(() => setChestMessage(null), 5000);
     };
 
+    const buyUpgrade = (stat: "health" | "speed" | "damage" | "reload") => {
+        const currentLevel = upgrades[stat];
+        const cost = 5000 + (currentLevel * 5000);
+        
+        if (currentLevel >= 10) {
+            setChestMessage("Upgrade Maxed Out!");
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+        
+        if (totalCoins < cost) {
+            setChestMessage(`Not enough points! You need ${cost.toLocaleString()}.`);
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+        
+        setTotalCoins(prev => prev - cost);
+        setUpgrades(prev => ({ ...prev, [stat]: prev[stat] + 1 }));
+        setChestMessage(`🔧 Upgraded ${stat.toUpperCase()}! 🔧`);
+        setTimeout(() => setChestMessage(null), 3000);
+    };
+
     useEffect(() => {
         if (gameState === 'playing' && canvasRef.current) {
             const handleResize = () => {
@@ -343,7 +370,8 @@ function AppInner() {
                     }
                 },
                 customization,
-                customEnemyCount !== '' ? customEnemyCount : undefined
+                customEnemyCount !== '' ? customEnemyCount : undefined,
+                upgrades
             );
             engine.isMobile = isMobile;
             engineRef.current = engine;
@@ -354,7 +382,7 @@ function AppInner() {
                 engine.stop();
             };
         }
-    }, [gameState, selectedTank, difficulty, customEnemyCount, customization]);
+    }, [gameState, selectedTank, difficulty, customEnemyCount, customization, upgrades]);
 
     useEffect(() => {
         if (engineRef.current) {
@@ -701,6 +729,45 @@ function AppInner() {
                                                 ))}
                                             </div>
                                         </section>
+                                        
+                                        <section>
+                                            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
+                                                <Target className="w-5 h-5 text-emerald-500" />
+                                                Black Market Upgrades
+                                            </h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 glass-panel rounded-3xl">
+                                                {[
+                                                    { id: 'health', name: 'Armor Plating', levels: upgrades.health, desc: '+10% HP per level' },
+                                                    { id: 'speed', name: 'Engine Tuning', levels: upgrades.speed, desc: '+5% Speed per level' },
+                                                    { id: 'damage', name: 'Munitions', levels: upgrades.damage, desc: '+5% Damage per level' },
+                                                    { id: 'reload', name: 'Auto-Loader', levels: upgrades.reload, desc: '-5% Reload per level' }
+                                                ].map(upgrade => {
+                                                    const isMax = upgrade.levels >= 10;
+                                                    const cost = 5000 + (upgrade.levels * 5000);
+                                                    return (
+                                                        <div key={upgrade.id} className="p-4 rounded-xl border border-white/5 bg-neutral-900/50 flex flex-col justify-between">
+                                                            <div>
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <span className="text-sm font-bold uppercase tracking-widest text-emerald-400">{upgrade.name}</span>
+                                                                    <span className="text-xs font-mono text-neutral-500">Lv.{upgrade.levels}/10</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-neutral-400 mb-4 h-8">{upgrade.desc}</p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => buyUpgrade(upgrade.id as any)}
+                                                                disabled={isMax}
+                                                                className={`w-full py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                                                                    isMax ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                                                }`}
+                                                            >
+                                                                {isMax ? 'MAX LEVEL' : `UPGRADE (${cost.toLocaleString()})`}
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </section>
+                                        
                                         <section>
                                             <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
                                                 <Target className="w-5 h-5 text-indigo-500" />
@@ -1081,7 +1148,10 @@ function AppInner() {
                         </div>
                         <div className="flex flex-col gap-4">
                             <button
-                                onClick={() => setGameState('playing')}
+                                onClick={() => {
+                                    setTotalCoins(prev => prev + uiState.score);
+                                    setGameState('playing');
+                                }}
                                 className="bg-white text-black font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 REDEPLOY
