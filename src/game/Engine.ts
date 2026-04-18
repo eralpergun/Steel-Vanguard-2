@@ -92,8 +92,13 @@ export type Item = {
     life: number;
 };
 
+export type MissionItem = {
+    x: number; y: number;
+    collected: boolean;
+};
+
 export type Mission = {
-    type: 'capture' | 'destroy';
+    type: 'capture' | 'destroy' | 'survive' | 'collect';
     x: number; y: number;
     radius?: number;
     targetId?: number;
@@ -101,6 +106,9 @@ export type Mission = {
     active: boolean;
     title: string;
     rewardDesc: string;
+    duration?: number;
+    maxDuration?: number;
+    itemsToCollect?: MissionItem[];
 };
 
 export class GameEngine {
@@ -1066,13 +1074,13 @@ export class GameEngine {
         if (!this.currentMission) {
             this.missionSpawnTimer -= dt;
             if (this.missionSpawnTimer <= 0) {
-                const isCapture = Math.random() > 0.5;
+                const missionTypeRand = Math.random();
                 const spawnDist = Math.random() * 500 + 500; // 500 to 1000 pixels away
                 const spawnAngle = Math.random() * Math.PI * 2;
                 const spawnX = this.player.x + Math.cos(spawnAngle) * spawnDist;
                 const spawnY = this.player.y + Math.sin(spawnAngle) * spawnDist;
 
-                if (isCapture) {
+                if (missionTypeRand < 0.25) {
                     this.currentMission = {
                         type: 'capture',
                         x: spawnX,
@@ -1104,7 +1112,7 @@ export class GameEngine {
                         lastDamageTime: 0,
                         color: '#8b5cf6' // Purple
                     });
-                } else {
+                } else if (missionTypeRand < 0.5) {
                     const targetId = this.nextId++;
                     const targetObstacle: Obstacle = {
                         id: targetId,
@@ -1166,6 +1174,61 @@ export class GameEngine {
                         lastDamageTime: 0,
                         color: '#8b5cf6' // Purple
                     });
+                } else if (missionTypeRand < 0.75) {
+                    this.currentMission = {
+                        type: 'survive',
+                        x: this.player.x,
+                        y: this.player.y,
+                        progress: 0,
+                        active: true,
+                        duration: 30, // Survive for 30s
+                        maxDuration: 30,
+                        title: 'Survive the Ambush',
+                        rewardDesc: '+2500 Score & Full Ammo'
+                    };
+                    
+                    // Spawn 3 aggressive light tanks closely
+                    for (let j=0; j<3; j++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        this.enemies.push({
+                            id: this.nextId++,
+                            type: 'light',
+                            x: this.player.x + Math.cos(ang) * 400,
+                            y: this.player.y + Math.sin(ang) * 400,
+                            radius: 16,
+                            hullAngle: 0, turretAngle: 0,
+                            speed: 0, maxSpeed: 380,
+                            turnSpeed: 4.5, turretTurnSpeed: 6.0,
+                            health: 120, maxHealth: 120,
+                            reloadTimer: 0, reloadTime: 0.5,
+                            speedBuffTimer: 0,
+                            damage: 25,
+                            armorFront: 1.0, armorSide: 1.0, armorRear: 1.0,
+                            ammo: 999, maxAmmo: 999,
+                            isPlayer: false,
+                            lastDamageTime: 0,
+                            color: '#b91c1c' // Red aggressive
+                        });
+                    }
+                } else {
+                    const items = [];
+                    for(let i=0; i<3; i++){
+                        items.push({
+                            x: this.player.x + (Math.random()-0.5)*1500,
+                            y: this.player.y + (Math.random()-0.5)*1500,
+                            collected: false
+                        });
+                    }
+                    this.currentMission = {
+                        type: 'collect',
+                        x: items[0].x, // point to first uncollected
+                        y: items[0].y,
+                        progress: 0,
+                        active: true,
+                        itemsToCollect: items,
+                        title: 'Collect Supply Drops',
+                        rewardDesc: '+2000 Score & Airstrike'
+                    };
                 }
             }
         } else {
@@ -1193,6 +1256,46 @@ export class GameEngine {
                     this.score += 1500;
                     this.airstrikeCooldown = 0;
                     this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'BASE DESTROYED!', life: 2.0, maxLife: 2.0, color: '#10b981' });
+                    this.floatingTexts.push({ x: this.player.x, y: this.player.y - 60, text: '+ AIRSTRIKE READY', life: 2.0, maxLife: 2.0, color: '#34d399' });
+                    this.currentMission = null;
+                    this.missionSpawnTimer = 10;
+                }
+            } else if (this.currentMission.type === 'survive') {
+                this.currentMission.duration! -= dt;
+                this.currentMission.progress = 100 - (this.currentMission.duration! / this.currentMission.maxDuration!) * 100;
+                if (this.currentMission.duration! <= 0) {
+                    this.score += 2500;
+                    this.player.ammo = this.player.maxAmmo;
+                    this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'AMBUSH SURVIVED!', life: 2.0, maxLife: 2.0, color: '#10b981' });
+                    this.floatingTexts.push({ x: this.player.x, y: this.player.y - 60, text: '+ MAX AMMO', life: 2.0, maxLife: 2.0, color: '#34d399' });
+                    this.currentMission = null;
+                    this.missionSpawnTimer = 10;
+                }
+            } else if (this.currentMission.type === 'collect') {
+                let collectedCount = 0;
+                let nextTarget = null;
+                for (let item of this.currentMission.itemsToCollect!) {
+                    if (!item.collected) {
+                        const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
+                        if (dist < this.player.radius + 30) {
+                            item.collected = true;
+                            this.floatingTexts.push({ x: item.x, y: item.y - 20, text: 'SUPPLY COLLECTED', life: 1.5, maxLife: 1.5, color: '#f59e0b' });
+                        } else if (!nextTarget) {
+                            nextTarget = item; // point to the closest or first uncollected one
+                        }
+                    }
+                    if (item.collected) collectedCount++;
+                }
+                this.currentMission.progress = (collectedCount / this.currentMission.itemsToCollect!.length) * 100;
+                if (nextTarget) {
+                    this.currentMission.x = nextTarget.x;
+                    this.currentMission.y = nextTarget.y;
+                }
+
+                if (collectedCount >= this.currentMission.itemsToCollect!.length) {
+                    this.score += 2000;
+                    this.airstrikeCooldown = 0;
+                    this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'SUPPLIES SECURED!', life: 2.0, maxLife: 2.0, color: '#10b981' });
                     this.floatingTexts.push({ x: this.player.x, y: this.player.y - 60, text: '+ AIRSTRIKE READY', life: 2.0, maxLife: 2.0, color: '#34d399' });
                     this.currentMission = null;
                     this.missionSpawnTimer = 10;
@@ -1495,6 +1598,34 @@ export class GameEngine {
                     this.ctx.fillText('TARGET', target.x + target.w/2, target.y - 10);
                     this.ctx.restore();
                 }
+            } else if (this.currentMission.type === 'collect') {
+                for (let item of this.currentMission.itemsToCollect!) {
+                    if (!item.collected) {
+                        this.ctx.save();
+                        this.ctx.beginPath();
+                        this.ctx.arc(item.x, item.y, 25, 0, Math.PI * 2);
+                        this.ctx.fillStyle = `rgba(245, 158, 11, ${0.8 + Math.sin(performance.now() / 200) * 0.2})`;
+                        this.ctx.shadowColor = '#f59e0b';
+                        this.ctx.shadowBlur = 20;
+                        this.ctx.fill();
+                        
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.shadowBlur = 0;
+                        this.ctx.font = 'bold 24px monospace';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillText('★', item.x, item.y + 2);
+                        this.ctx.restore();
+                    }
+                }
+            } else if (this.currentMission.type === 'survive') {
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.arc(this.player.x, this.player.y, 800, 0, Math.PI * 2);
+                this.ctx.strokeStyle = `rgba(239, 68, 68, ${0.1 + Math.sin(performance.now() / 150) * 0.1})`;
+                this.ctx.lineWidth = 30;
+                this.ctx.stroke();
+                this.ctx.restore();
             }
         }
 
@@ -1672,7 +1803,7 @@ export class GameEngine {
         this.ctx.restore();
 
         // Draw Off-Screen Mission Indicator
-        if (this.currentMission && this.currentMission.active) {
+        if (this.currentMission && this.currentMission.active && this.currentMission.type !== 'survive') {
             const screenX = this.currentMission.x - this.camX;
             const screenY = this.currentMission.y - this.camY;
             
