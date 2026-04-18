@@ -75,6 +75,9 @@ export type Particle = {
     vx: number; vy: number;
     life: number; maxLife: number;
     color: string; size: number;
+    shape?: 'circle' | 'square' | 'line';
+    rotation?: number;
+    rotationSpeed?: number;
 };
 
 export type FloatingText = {
@@ -213,8 +216,6 @@ export class GameEngine {
             ruin0: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Ruined_buildings_in_Kabul.jpg/400px-Ruined_buildings_in_Kabul.jpg',
             ruin1: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Ruined_house_in_Agdam.jpg/400px-Ruined_house_in_Agdam.jpg',
             ruin2: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Ruined_house_in_the_village_of_Kopachi.jpg/400px-Ruined_house_in_the_village_of_Kopachi.jpg',
-            dead_tank0: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Destroyed_Iraqi_Type_69_tank.jpg/300px-Destroyed_Iraqi_Type_69_tank.jpg',
-            dead_tank1: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Destroyed_T-72_tank_in_Tskhinvali.jpg/300px-Destroyed_T-72_tank_in_Tskhinvali.jpg',
             crater: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Lochnagar_Crater.jpg/300px-Lochnagar_Crater.jpg'
         };
 
@@ -1030,7 +1031,7 @@ export class GameEngine {
 
         // --- Death Logic ---
         if (this.player.health <= 0) {
-            this.spawnExplosion(this.player.x, this.player.y, '#10b981', 50);
+            this.spawnTankExplosion(this.player.x, this.player.y, '#10b981');
             this.decorations.push({
                 x: this.player.x, y: this.player.y,
                 size: this.player.radius,
@@ -1053,7 +1054,7 @@ export class GameEngine {
 
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             if (this.enemies[i].health <= 0) {
-                this.spawnExplosion(this.enemies[i].x, this.enemies[i].y, '#ef4444', 30);
+                this.spawnTankExplosion(this.enemies[i].x, this.enemies[i].y, '#ef4444');
                 this.decorations.push({
                     x: this.enemies[i].x, y: this.enemies[i].y,
                     size: this.enemies[i].radius,
@@ -1405,7 +1406,8 @@ export class GameEngine {
                 life: Math.random() * 0.5 + 0.2,
                 maxLife: 0.7,
                 color: color,
-                size: size
+                size: size,
+                shape: 'circle'
             });
             // Add smoke
             if (Math.random() > 0.5) {
@@ -1416,7 +1418,57 @@ export class GameEngine {
                     life: Math.random() * 0.5 + 0.2,
                     maxLife: 0.7,
                     color: 'rgba(50, 50, 50, 0.5)',
-                    size: Math.random() * 8 + 4
+                    size: Math.random() * 8 + 4,
+                    shape: 'circle'
+                });
+            }
+        }
+    }
+
+    private spawnTankExplosion(x: number, y: number, color: string) {
+        // Dramatic central core shockwave
+        this.shockwaves.push({
+            x, y,
+            radius: 0,
+            maxRadius: 180,
+            life: 1.0,
+            color: 'rgba(255, 100, 0, 1)'
+        });
+        
+        // Massive fire cloud
+        this.spawnExplosion(x, y, '#ef4444', 40); // Red
+        this.spawnExplosion(x, y, '#f97316', 30); // Orange
+        this.spawnExplosion(x, y, '#eab308', 20); // Yellow
+        
+        // Scatter debris
+        for (let i = 0; i < 15; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let speed = Math.random() * 200 + 100;
+            let size = Math.random() * 8 + 4;
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: Math.random() * 1.5 + 1.0,
+                maxLife: 2.5,
+                color: Math.random() > 0.5 ? '#525252' : '#262626', // metallic debris
+                size: size,
+                shape: 'square',
+                rotation: Math.random() * Math.PI,
+                rotationSpeed: (Math.random() - 0.5) * 10
+            });
+            
+            // Burning debris trail pieces
+            if (Math.random() > 0.7) {
+                this.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: Math.random() * 0.5 + 0.5,
+                    maxLife: 1.0,
+                    color: '#fbbf24', 
+                    size: size * 0.5,
+                    shape: 'circle'
                 });
             }
         }
@@ -1473,44 +1525,76 @@ export class GameEngine {
                 }
             } else if (dec.type === 'dead_tank') {
                 const seed = Math.floor(Math.abs(dec.x + dec.y)) % 2;
-                const tex = this.textures[`dead_tank${seed}`];
                 
-                if (tex && tex.complete && tex.naturalWidth > 0) {
-                    this.ctx.beginPath();
-                    this.ctx.roundRect(-dec.size*1.2, -dec.size, dec.size * 2.4, dec.size * 2, 8);
-                    this.ctx.clip();
-                    this.ctx.drawImage(tex, -dec.size*1.2, -dec.size, dec.size * 2.4, dec.size * 2);
-                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Blend with dark ground
-                    this.ctx.fill();
-                } else {
-                    // Draw destroyed hull
-                    this.ctx.fillStyle = dec.color || '#333';
-                    this.ctx.beginPath();
-                    this.ctx.roundRect(-dec.size, -dec.size * 0.8, dec.size * 2, dec.size * 1.6, 4);
-                    this.ctx.fill();
-                    this.ctx.strokeStyle = '#111';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.stroke();
-                    
-                    // Draw broken turret
-                    this.ctx.beginPath();
-                    this.ctx.arc(0, 0, dec.size * 0.5, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.stroke();
-                    
-                    // Draw bent barrel
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, 0);
-                    this.ctx.lineTo(dec.size * 1.2, dec.size * 0.3); // slightly bent
-                    this.ctx.lineWidth = 4;
-                    this.ctx.stroke();
-                    
-                    // Add some scorch marks
-                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                    this.ctx.beginPath();
-                    this.ctx.arc(dec.size * 0.3, -dec.size * 0.2, dec.size * 0.4, 0, Math.PI * 2);
-                    this.ctx.fill();
+                this.ctx.save();
+                this.ctx.translate(dec.x, dec.y);
+                this.ctx.rotate(dec.rotation || 0);
+
+                // Burnt area on ground
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(0, 0, dec.size * 1.5, dec.size * 1.8, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Draw destroyed hull (Burnt and charred)
+                this.ctx.fillStyle = '#1c1917'; // very dark stone for charred metal
+                this.ctx.beginPath();
+                this.ctx.roundRect(-dec.size*0.9, -dec.size * 1.0, dec.size * 1.8, dec.size * 2.0, 6);
+                this.ctx.fill();
+                
+                // Inner exposed parts / rust
+                this.ctx.fillStyle = '#4a0404'; // dark red/rust
+                this.ctx.fillRect(-dec.size*0.6, -dec.size*0.4, dec.size*1.2, dec.size*0.8);
+                
+                // Track detritus
+                this.ctx.fillStyle = '#0f0f0f';
+                for(let k=0; k<2; k++) {
+                   const side = k === 0 ? -dec.size*1.0 : dec.size*0.6;
+                   this.ctx.fillRect(side, -dec.size * 1.1, dec.size*0.4, dec.size * 2.2);
                 }
+
+                // Blown off turret (slightly offset and rotated randomly)
+                this.ctx.save();
+                this.ctx.translate(dec.size * 0.4, dec.size * 0.5);
+                this.ctx.rotate(seed === 0 ? 0.3 : -0.5);
+                
+                this.ctx.fillStyle = '#292524'; // charred turret color
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, dec.size * 0.6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = '#000';
+                this.ctx.stroke();
+                
+                // Bent/Burnt Barrel
+                this.ctx.fillStyle = '#1c1917';
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -dec.size*0.1);
+                this.ctx.lineTo(dec.size * 1.5, -dec.size*0.1);
+                // The bent part
+                this.ctx.lineTo(dec.size * 1.7, dec.size*0.4);
+                this.ctx.lineTo(dec.size * 1.5, dec.size*0.4 - 4);
+                this.ctx.lineTo(dec.size * 1.5, Math.min(dec.size*0.1, dec.size*0.4 - 4));
+                this.ctx.lineTo(0, dec.size*0.1);
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.restore(); // restore turret pos
+
+                // Embers / Fire
+                if (performance.now() % (1000) > 500) {
+                     this.ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+                     this.ctx.beginPath();
+                     this.ctx.arc(dec.size * (Math.random()-0.5), dec.size * (Math.random()-0.5), Math.random() * 5 + 5, 0, Math.PI * 2);
+                     this.ctx.fill();
+                     this.ctx.fillStyle = 'rgba(245, 158, 11, 0.6)';
+                     this.ctx.beginPath();
+                     this.ctx.arc(dec.size * (Math.random()-0.5), dec.size * (Math.random()-0.5), Math.random() * 4 + 2, 0, Math.PI * 2);
+                     this.ctx.fill();
+                }
+
+                this.ctx.restore();
             } else {
                 // Rubble
                 this.ctx.fillStyle = '#404040';
@@ -1768,16 +1852,27 @@ export class GameEngine {
 
         // Draw Particles
         for (let p of this.particles) {
+            this.ctx.save();
             this.ctx.globalAlpha = p.life / p.maxLife;
-            this.ctx.shadowBlur = 10;
-            this.ctx.shadowColor = p.color;
-            this.ctx.fillStyle = p.color;
-            this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
-            this.ctx.fill();
+            
+            if (p.shape === 'square') {
+                this.ctx.translate(p.x, p.y);
+                if (p.rotation !== undefined && p.rotationSpeed !== undefined) {
+                    p.rotation += p.rotationSpeed * 0.016; // Approx 60fps dt
+                    this.ctx.rotate(p.rotation);
+                }
+                this.ctx.fillStyle = p.color;
+                this.ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
+            } else {
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowColor = p.color;
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            this.ctx.restore();
         }
-        this.ctx.globalAlpha = 1.0;
-        this.ctx.shadowBlur = 0;
 
         // Draw Floating Texts
         this.ctx.font = 'bold 14px "Inter", sans-serif';
