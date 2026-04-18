@@ -129,7 +129,7 @@ export class GameEngine {
     private shockwaves: Shockwave[] = [];
 
     public currentMission: Mission | null = null;
-    private missionSpawnTimer: number = 10; // First mission after 10 seconds
+    private missionSpawnTimer: number = 5; // First mission after 5 seconds
 
     public isPaused: boolean = false;
     private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
@@ -1165,8 +1165,9 @@ export class GameEngine {
                         this.score += 1000;
                         this.player.health = this.player.maxHealth;
                         this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'MISSION COMPLETE!', life: 2.0, maxLife: 2.0, color: '#10b981' });
+                        this.floatingTexts.push({ x: this.player.x, y: this.player.y - 60, text: '+ FULL HEAL', life: 2.0, maxLife: 2.0, color: '#34d399' });
                         this.currentMission = null;
-                        this.missionSpawnTimer = 20;
+                        this.missionSpawnTimer = 10;
                     }
                 } else {
                     this.currentMission.progress -= dt * 5;
@@ -1180,8 +1181,9 @@ export class GameEngine {
                     this.score += 1500;
                     this.airstrikeCooldown = 0;
                     this.floatingTexts.push({ x: this.player.x, y: this.player.y - 40, text: 'BASE DESTROYED!', life: 2.0, maxLife: 2.0, color: '#10b981' });
+                    this.floatingTexts.push({ x: this.player.x, y: this.player.y - 60, text: '+ AIRSTRIKE READY', life: 2.0, maxLife: 2.0, color: '#34d399' });
                     this.currentMission = null;
-                    this.missionSpawnTimer = 20;
+                    this.missionSpawnTimer = 10;
                 }
             }
         }

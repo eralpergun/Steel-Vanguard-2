@@ -6,7 +6,7 @@ import About from './pages/About';
 
 import { Crosshair, ShieldAlert, Target } from 'lucide-react';
 import { db } from './firebase';
-import { ref, get, set, child, onValue, query, orderByChild, limitToLast } from 'firebase/database';
+import { ref, get, set, child, onValue, query, orderByChild, limitToLast, remove } from 'firebase/database';
 import { Joystick } from 'react-joystick-component';
 
 export default function App() {
@@ -42,6 +42,10 @@ function AppInner() {
         else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
     }, [location.pathname]);
     const [username, setUsername] = useState('Anonymous');
+    const [password, setPassword] = useState('');
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [isGuest, setIsGuest] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
@@ -60,21 +64,28 @@ function AppInner() {
     }, []);
 
     const [totalCoins, setTotalCoins] = useState(0);
-    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy', '67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili', 'op_tank', 'secret', 'shitty']);
+    const [unlockedTanks, setUnlockedTanks] = useState<string[]>(['light', 'medium', 'heavy']);
     const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['default']);
     const [customization, setCustomization] = useState({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
     const [chestMessage, setChestMessage] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<{ username: string, score: number }[]>([]);
 
+    // Removed onAuthStateChanged since we are using custom auth
+    useEffect(() => {
+        // Just checking session could go here if we used localstorage, but we'll default to login
+    }, []);
+
     useEffect(() => {
         if (gameState === 'menu') {
-            const leaderboardRef = query(ref(db, 'leaderboard'), orderByChild('score'), limitToLast(5));
+            const leaderboardRef = query(ref(db, 'leaderboard'), orderByChild('score'), limitToLast(10));
             const unsubscribe = onValue(leaderboardRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     const sorted = Object.entries(data)
                         .map(([username, entry]: [string, any]) => ({ username, score: entry.score as number }))
-                        .sort((a, b) => b.score - a.score);
+                        .filter(({ username }) => !username.startsWith('Guest_') && username !== 'Anonymous')
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, 5); // Take top 5 after filtering
                     setLeaderboard(sorted);
                 }
             });
@@ -82,24 +93,21 @@ function AppInner() {
         }
     }, [gameState]);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent, mode: 'login' | 'register' | 'guest') => {
         e.preventDefault();
-        if (!username.trim()) return;
-        
         setIsLoggingIn(true);
         try {
-            const playerRef = ref(db, `players/${username}`);
-            const snapshot = await get(playerRef);
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                setTotalCoins(data.totalCoins || 0);
-                setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
-                setUnlockedSkins(data.unlockedSkins || ['default']);
-                setCustomization(data.customization || { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
-            } else {
-                // Initialize new user
-                await set(playerRef, {
+            let finalUsername = username.trim();
+
+            if (mode === 'guest') {
+                finalUsername = `Guest_${Math.floor(Math.random() * 10000)}`;
+                setUsername(finalUsername);
+                setIsGuest(true);
+                setIsLoggedIn(true);
+
+                // Initialize new guest user
+                await set(ref(db, `players/${finalUsername}`), {
+                    username: finalUsername,
                     totalCoins: 0,
                     unlockedTanks: ['light', 'medium', 'heavy'],
                     unlockedSkins: ['default'],
@@ -109,31 +117,86 @@ function AppInner() {
                 setUnlockedTanks(['light', 'medium', 'heavy']);
                 setUnlockedSkins(['default']);
                 setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
+
+            } else {
+                if (!finalUsername) { alert("Please enter a username"); setIsLoggingIn(false); return; }
+                if (!password) { alert("Please enter a password"); setIsLoggingIn(false); return; }
+                
+                const playerRef = ref(db, `players/${finalUsername}`);
+                const snapshot = await get(playerRef);
+
+                if (mode === 'register') {
+                    if (snapshot.exists() && !snapshot.val().isGuest) {
+                        alert("Username already exists!");
+                        setIsLoggingIn(false);
+                        return;
+                    }
+                    // Create account
+                    await set(playerRef, {
+                        username: finalUsername,
+                        password: password, // Storing purely as requested
+                        totalCoins: 0,
+                        unlockedTanks: ['light', 'medium', 'heavy'],
+                        unlockedSkins: ['default'],
+                        customization: { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' }
+                    });
+                    setIsGuest(false);
+                    setIsLoggedIn(true);
+                    setTotalCoins(0);
+                    setUnlockedTanks(['light', 'medium', 'heavy']);
+                    setUnlockedSkins(['default']);
+                    setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
+
+                } else if (mode === 'login') {
+                    if (!snapshot.exists()) {
+                        alert("Account not found!");
+                        setIsLoggingIn(false);
+                        return;
+                    }
+                    const data = snapshot.val();
+                    if (data.password !== password) {
+                        alert("Incorrect password!");
+                        setIsLoggingIn(false);
+                        return;
+                    }
+                    // Login successful
+                    setIsGuest(false);
+                    setIsLoggedIn(true);
+                    setUsername(data.username);
+                    setTotalCoins(data.totalCoins || 0);
+                    setUnlockedTanks(data.unlockedTanks || ['light', 'medium', 'heavy']);
+                    setUnlockedSkins(data.unlockedSkins || ['default']);
+                    setCustomization(data.customization || { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
+                }
             }
             setGameState('menu');
-        } catch (error) {
-            console.error("Firebase login error:", error);
-            alert("Failed to connect to database. Please check your configuration.");
+        } catch (error: any) {
+            console.error("Auth error:", error);
+            alert("Authentication failed. " + error.message);
         } finally {
             setIsLoggingIn(false);
         }
     };
 
     useEffect(() => {
-        if (gameState !== 'login' && username) {
+        if (gameState !== 'login' && isLoggedIn && username) {
             const saveData = async () => {
                 try {
                     await set(ref(db, `players/${username}`), {
+                        username,
+                        password: isGuest ? null : password,
                         totalCoins,
                         unlockedTanks,
                         unlockedSkins,
                         customization
                     });
                     
-                    await set(ref(db, `leaderboard/${username}`), {
-                        username,
-                        score: totalCoins
-                    });
+                    if (!isGuest && !username.startsWith('Guest_')) {
+                        await set(ref(db, `leaderboard/${username}`), {
+                            username,
+                            score: totalCoins
+                        });
+                    }
                 } catch (error) {
                     console.error("Error saving data:", error);
                 }
@@ -141,6 +204,35 @@ function AppInner() {
             saveData();
         }
     }, [totalCoins, unlockedTanks, username, gameState]);
+
+    const handleSignOut = async () => {
+        try {
+            setIsLoggedIn(false);
+            setUsername('Anonymous');
+            setPassword('');
+            setGameState('login');
+        } catch (error) {
+            console.error("Sign out error:", error);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
+        
+        try {
+            if (username && !isGuest) {
+                await remove(ref(db, `players/${username}`));
+                await remove(ref(db, `leaderboard/${username}`));
+            }
+            setIsLoggedIn(false);
+            setUsername('Anonymous');
+            setPassword('');
+            setGameState('login');
+        } catch (error: any) {
+            console.error("Delete account error:", error);
+            alert("Failed to delete account. Please log in again to delete.");
+        }
+    };
 
     const buyChest = () => {
         if (totalCoins < 5000) {
@@ -303,7 +395,7 @@ function AppInner() {
                             <p className="text-neutral-500 text-sm uppercase tracking-widest">War-Torn City Combat</p>
                         </div>
                         
-                        <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 ml-1">Username</label>
                                 <input
@@ -315,14 +407,49 @@ function AppInner() {
                                     maxLength={15}
                                 />
                             </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 ml-1">Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Enter Password..."
+                                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-neutral-700 focus:outline-none focus:border-emerald-500/50 transition-all font-mono"
+                                />
+                            </div>
+                            
                             <button
-                                type="submit"
-                                disabled={isLoggingIn || !username.trim()}
+                                onClick={(e) => handleAuth(e, isRegistering ? 'register' : 'login')}
+                                disabled={isLoggingIn || !username.trim() || !password}
                                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-900/20"
                             >
-                                {isLoggingIn ? 'CONNECTING...' : 'INITIALIZE SYSTEM'}
+                                {isLoggingIn ? 'CONNECTING...' : (isRegistering ? 'CREATE ACCOUNT' : 'LOGIN')}
                             </button>
-                        </form>
+                            
+                            <div className="flex flex-col gap-2 mt-4">
+                                <button 
+                                    onClick={() => setIsRegistering(!isRegistering)}
+                                    className="text-neutral-400 hover:text-white text-sm transition-colors"
+                                >
+                                    {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
+                                </button>
+                                <div className="relative py-2">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-white/10"></div>
+                                    </div>
+                                    <div className="relative flex justify-center">
+                                        <span className="bg-neutral-900/50 px-2 text-xs text-neutral-500">OR</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) => handleAuth(e, 'guest')}
+                                    disabled={isLoggingIn}
+                                    className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    PLAY AS GUEST
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div className="absolute bottom-6 w-full text-center flex justify-center items-center gap-4">
                         <Link to="/hakkimizda" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Hakkımızda</Link>
@@ -351,15 +478,22 @@ function AppInner() {
                             <div className="text-right">
                                 <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">Total War Credits</p>
                                 <p className="text-4xl font-mono font-bold text-yellow-500 mb-2">{(totalCoins || 0).toLocaleString()}</p>
-                                <button
-                                    onClick={() => {
-                                        setUsername('');
-                                        setGameState('login');
-                                    }}
-                                    className="text-xs font-bold uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors"
-                                >
-                                    Hesap Oluştur veya Giriş Yap
-                                </button>
+                                <div className="flex flex-col items-end gap-2">
+                                    <button
+                                        onClick={handleSignOut}
+                                        className="text-xs font-bold uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors"
+                                    >
+                                        Log Out
+                                    </button>
+                                    {!isGuest && (
+                                        <button
+                                            onClick={handleDeleteAccount}
+                                            className="text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors"
+                                        >
+                                            Delete Account
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -399,142 +533,149 @@ function AppInner() {
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="mt-8 bg-gradient-to-br from-neutral-900 to-black rounded-3xl border border-white/10 p-8 shadow-2xl">
-                                        <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
-                                            <div className="w-2 h-6 bg-emerald-500 rounded-full"></div>
-                                            Customize Tank
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Skin</label>
-                                                <select value={customization.skin} onChange={(e) => setCustomization(prev => ({ ...prev, skin: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                    {unlockedSkins.map(skin => (
-                                                        <option key={skin} value={skin}>{skin.charAt(0).toUpperCase() + skin.slice(1)}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Paint Job</label>
-                                                <div className="relative group">
-                                                    <input type="color" value={customization.paintJob} onChange={(e) => setCustomization(prev => ({ ...prev, paintJob: e.target.value }))} className="w-full h-12 rounded-xl cursor-pointer bg-neutral-800 border border-white/10 p-1" />
+                                    {/* Customization and Special Operations hidden for guests */}
+                                    {!isGuest && (
+                                        <div className="mt-8 bg-gradient-to-br from-neutral-900 to-black rounded-3xl border border-white/10 p-8 shadow-2xl">
+                                            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
+                                                <div className="w-2 h-6 bg-emerald-500 rounded-full"></div>
+                                                Customize Tank
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Skin</label>
+                                                    <select value={customization.skin} onChange={(e) => setCustomization(prev => ({ ...prev, skin: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                        {unlockedSkins.map(skin => (
+                                                            <option key={skin} value={skin}>{skin.charAt(0).toUpperCase() + skin.slice(1)}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Paint Job</label>
+                                                    <div className="relative group">
+                                                        <input type="color" value={customization.paintJob} onChange={(e) => setCustomization(prev => ({ ...prev, paintJob: e.target.value }))} className="w-full h-12 rounded-xl cursor-pointer bg-neutral-800 border border-white/10 p-1" />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Decal</label>
+                                                    <select value={customization.decal} onChange={(e) => setCustomization(prev => ({ ...prev, decal: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                        <option value="none">None</option>
+                                                        <option value="★">Star</option>
+                                                        <option value="☠">Skull</option>
+                                                        <option value="⚡">Bolt</option>
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Visual Mod</label>
+                                                    <select value={customization.visualMod} onChange={(e) => setCustomization(prev => ({ ...prev, visualMod: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                                        <option value="none">None</option>
+                                                        <option value="antenna">Antenna</option>
+                                                        <option value="armor">Extra Armor</option>
+                                                    </select>
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Decal</label>
-                                                <select value={customization.decal} onChange={(e) => setCustomization(prev => ({ ...prev, decal: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                    <option value="none">None</option>
-                                                    <option value="★">Star</option>
-                                                    <option value="☠">Skull</option>
-                                                    <option value="⚡">Bolt</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Visual Mod</label>
-                                                <select value={customization.visualMod} onChange={(e) => setCustomization(prev => ({ ...prev, visualMod: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                    <option value="none">None</option>
-                                                    <option value="antenna">Antenna</option>
-                                                    <option value="armor">Extra Armor</option>
-                                                </select>
-                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </section>
 
-                                <section>
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-3">
-                                            <Target className="w-5 h-5 text-yellow-500" />
-                                            Special Operations
-                                        </h3>
-                                        <div className="flex gap-2">
-                                            <button 
-                                                onClick={buyChest}
-                                                className="bg-yellow-600 hover:bg-yellow-500 text-white text-[10px] font-bold py-2 px-4 rounded-full transition-all"
-                                            >
-                                                CHEST (5K)
-                                            </button>
-                                            <button 
-                                                onClick={buySecretTank}
-                                                className="bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold py-2 px-4 rounded-full transition-all"
-                                            >
-                                                SECRET (100K)
-                                            </button>
-                                            <button 
-                                                onClick={buyOPChest}
-                                                className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold py-2 px-4 rounded-full transition-all"
-                                            >
-                                                OP CHEST (1M)
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
-                                        {brainrotStats.map(t => (
-                                            <button
-                                                key={t.id}
-                                                disabled={!unlockedTanks.includes(t.id)}
-                                                onClick={() => setSelectedTank(t.id as any)}
-                                                className={`p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
-                                                    !unlockedTanks.includes(t.id) ? 'opacity-40 grayscale cursor-not-allowed' :
-                                                    selectedTank === t.id 
-                                                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] scale-[1.02]' 
-                                                    : 'bg-neutral-950/50 border-white/5 hover:border-yellow-500/30 hover:bg-neutral-900'
-                                                }`}
-                                            >
-                                                {selectedTank === t.id && (
-                                                    <div className="absolute top-3 right-3 w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />
-                                                )}
-                                                {!unlockedTanks.includes(t.id) && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
-                                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-white/20 px-2 py-1">LOCKED</span>
-                                                    </div>
-                                                )}
-                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-yellow-400 transition-colors">{t.desc}</p>
-                                                <h4 className="text-xl font-bold mb-4">{t.name}</h4>
-                                                <ul className="text-[10px] uppercase tracking-wider space-y-1">
-                                                    <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
-                                                    <li><span className="text-neutral-500">Damage:</span> {t.dmg}</li>
-                                                </ul>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
+                                {!isGuest && (
+                                    <>
+                                        <section>
+                                            <div className="flex justify-between items-center mb-6">
+                                                <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-3">
+                                                    <Target className="w-5 h-5 text-yellow-500" />
+                                                    Special Operations
+                                                </h3>
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={buyChest}
+                                                        className="bg-yellow-600 hover:bg-yellow-500 text-white text-[10px] font-bold py-2 px-4 rounded-full transition-all"
+                                                    >
+                                                        CHEST (5K)
+                                                    </button>
+                                                    <button 
+                                                        onClick={buySecretTank}
+                                                        className="bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold py-2 px-4 rounded-full transition-all"
+                                                    >
+                                                        SECRET (100K)
+                                                    </button>
+                                                    <button 
+                                                        onClick={buyOPChest}
+                                                        className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold py-2 px-4 rounded-full transition-all"
+                                                    >
+                                                        OP CHEST (1M)
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
+                                                {brainrotStats.map(t => (
+                                                    <button
+                                                        key={t.id}
+                                                        disabled={!unlockedTanks.includes(t.id)}
+                                                        onClick={() => setSelectedTank(t.id as any)}
+                                                        className={`p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
+                                                            !unlockedTanks.includes(t.id) ? 'opacity-40 grayscale cursor-not-allowed' :
+                                                            selectedTank === t.id 
+                                                            ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] scale-[1.02]' 
+                                                            : 'bg-neutral-950/50 border-white/5 hover:border-yellow-500/30 hover:bg-neutral-900'
+                                                        }`}
+                                                    >
+                                                        {selectedTank === t.id && (
+                                                            <div className="absolute top-3 right-3 w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />
+                                                        )}
+                                                        {!unlockedTanks.includes(t.id) && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
+                                                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-white/20 px-2 py-1">LOCKED</span>
+                                                            </div>
+                                                        )}
+                                                        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-yellow-400 transition-colors">{t.desc}</p>
+                                                        <h4 className="text-xl font-bold mb-4">{t.name}</h4>
+                                                        <ul className="text-[10px] uppercase tracking-wider space-y-1">
+                                                            <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
+                                                            <li><span className="text-neutral-500">Damage:</span> {t.dmg}</li>
+                                                        </ul>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </section>
 
-                                <section>
-                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
-                                        <ShieldAlert className="w-5 h-5 text-red-500" />
-                                        Classified Prototypes
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
-                                        {opStats.map(t => (
-                                            <button
-                                                key={t.id}
-                                                disabled={!unlockedTanks.includes(t.id)}
-                                                onClick={() => setSelectedTank(t.id as any)}
-                                                className={`p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
-                                                    !unlockedTanks.includes(t.id) ? 'opacity-40 grayscale cursor-not-allowed' :
-                                                    selectedTank === t.id 
-                                                    ? 'bg-red-500/10 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)] scale-[1.02]' 
-                                                    : 'bg-neutral-950/50 border-white/5 hover:border-red-500/30 hover:bg-neutral-900'
-                                                }`}
-                                            >
-                                                {selectedTank === t.id && (
-                                                    <div className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                                                )}
-                                                {!unlockedTanks.includes(t.id) && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
-                                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-white/20 px-2 py-1">LOCKED</span>
-                                                    </div>
-                                                )}
-                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-red-400 transition-colors">{t.desc}</p>
-                                                <h4 className="text-xl font-bold mb-4">{t.name}</h4>
-                                                <ul className="text-[10px] uppercase tracking-wider space-y-1">
-                                                    <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
-                                                    <li><span className="text-neutral-500">Damage:</span> {t.dmg}</li>
-                                                </ul>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
+                                        <section>
+                                            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
+                                                <ShieldAlert className="w-5 h-5 text-red-500" />
+                                                Classified Prototypes
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
+                                                {opStats.map(t => (
+                                                    <button
+                                                        key={t.id}
+                                                        disabled={!unlockedTanks.includes(t.id)}
+                                                        onClick={() => setSelectedTank(t.id as any)}
+                                                        className={`p-6 rounded-2xl border transition-all text-left relative overflow-hidden group ${
+                                                            !unlockedTanks.includes(t.id) ? 'opacity-40 grayscale cursor-not-allowed' :
+                                                            selectedTank === t.id 
+                                                            ? 'bg-red-500/10 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)] scale-[1.02]' 
+                                                            : 'bg-neutral-950/50 border-white/5 hover:border-red-500/30 hover:bg-neutral-900'
+                                                        }`}
+                                                    >
+                                                        {selectedTank === t.id && (
+                                                            <div className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                                                        )}
+                                                        {!unlockedTanks.includes(t.id) && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
+                                                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-white/20 px-2 py-1">LOCKED</span>
+                                                            </div>
+                                                        )}
+                                                        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1 group-hover:text-red-400 transition-colors">{t.desc}</p>
+                                                        <h4 className="text-xl font-bold mb-4">{t.name}</h4>
+                                                        <ul className="text-[10px] uppercase tracking-wider space-y-1">
+                                                            <li><span className="text-neutral-500">Armor:</span> {t.armor}</li>
+                                                            <li><span className="text-neutral-500">Damage:</span> {t.dmg}</li>
+                                                        </ul>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    </>
+                                )}
 
                                 <section className="bg-neutral-900/50 rounded-3xl border border-white/5 p-8">
                                     <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">Leaderboard</h3>
@@ -691,32 +832,32 @@ function AppInner() {
                     <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight} className="block" />
                     
                     {/* HUD */}
-                    <div className="absolute top-8 left-8 right-8 flex justify-between items-start pointer-events-none">
-                        <div className="space-y-4">
-                            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-64">
-                                <div className="flex justify-between items-end mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Armor Integrity</span>
-                                    <span className="text-xl font-mono font-bold text-emerald-500">{Math.ceil(uiState.health)}</span>
+                    <div className="absolute inset-4 sm:inset-8 flex flex-col sm:flex-row justify-between items-start pointer-events-none gap-4 sm:gap-0">
+                        <div className="space-y-2 sm:space-y-4 w-full sm:w-64">
+                            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl">
+                                <div className="flex justify-between items-end mb-1 sm:mb-2">
+                                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-neutral-500">Armor Integrity</span>
+                                    <span className="text-lg sm:text-xl font-mono font-bold text-emerald-500">{Math.ceil(uiState.health)}</span>
                                 </div>
-                                <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                <div className="h-1.5 sm:h-2 bg-neutral-800 rounded-full overflow-hidden">
                                     <div 
                                         className={`h-full transition-all duration-300 ${uiState.isRegenerating ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-500'}`} 
                                         style={{ width: `${(uiState.health / uiState.maxHealth) * 100}%` }}
                                     />
                                 </div>
                                 {uiState.isRegenerating && (
-                                    <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-emerald-400 animate-pulse">
+                                    <div className="mt-1 sm:mt-2 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-emerald-400 animate-pulse">
                                         Regenerating...
                                     </div>
                                 )}
                             </div>
                             
-                            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-64">
-                                <div className="flex justify-between items-end mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Weapon System</span>
-                                    <span className="text-xl font-mono font-bold text-yellow-500">{uiState.ammo}/{uiState.maxAmmo}</span>
+                            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-2 sm:p-4 rounded-xl sm:rounded-2xl w-full sm:w-64">
+                                <div className="flex justify-between items-end mb-1 sm:mb-2">
+                                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-neutral-500">Weapon</span>
+                                    <span className="text-lg sm:text-xl font-mono font-bold text-yellow-500">{uiState.ammo}/{uiState.maxAmmo}</span>
                                 </div>
-                                <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                <div className="h-1.5 sm:h-2 bg-neutral-800 rounded-full overflow-hidden">
                                     <div 
                                         className="h-full bg-yellow-500 transition-all duration-300" 
                                         style={{ width: `${(uiState.ammo / uiState.maxAmmo) * 100}%` }}
@@ -725,43 +866,45 @@ function AppInner() {
                             </div>
                             
                             {/* Airstrike Cooldown UI */}
-                            {uiState.airstrikeCooldown > 0 && (
-                                <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-64">
-                                    <div className="flex justify-between items-end mb-2">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Airstrike (F)</span>
-                                        <span className="text-xl font-mono font-bold text-red-500">{Math.ceil(uiState.airstrikeCooldown)}s</span>
+                            <div>
+                                {uiState.airstrikeCooldown > 0 && (
+                                    <div className="bg-black/40 backdrop-blur-md border border-white/10 p-2 sm:p-4 rounded-xl sm:rounded-2xl w-full sm:w-64">
+                                        <div className="flex justify-between items-end mb-1 sm:mb-2">
+                                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-neutral-500">Airstrike (F)</span>
+                                            <span className="text-lg sm:text-xl font-mono font-bold text-red-500">{Math.ceil(uiState.airstrikeCooldown)}s</span>
+                                        </div>
+                                        <div className="h-1.5 sm:h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-red-500 transition-all duration-300" 
+                                                style={{ width: `${(uiState.airstrikeCooldown / 30) * 100}%` }}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className="h-full bg-red-500 transition-all duration-300" 
-                                            style={{ width: `${(uiState.airstrikeCooldown / 30) * 100}%` }}
-                                        />
+                                )}
+                                {uiState.airstrikeCooldown <= 0 && (
+                                    <div className="bg-black/40 backdrop-blur-md border border-emerald-500/30 p-2 sm:p-4 rounded-xl sm:rounded-2xl w-full sm:w-64">
+                                        <div className="flex justify-between items-end">
+                                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-emerald-500">Airstrike (F)</span>
+                                            <span className="text-lg sm:text-xl font-mono font-bold text-emerald-500">READY</span>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                            {uiState.airstrikeCooldown <= 0 && (
-                                <div className="bg-black/40 backdrop-blur-md border border-emerald-500/30 p-4 rounded-2xl w-64">
-                                    <div className="flex justify-between items-end">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Airstrike (F)</span>
-                                        <span className="text-xl font-mono font-bold text-emerald-500">READY</span>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
 
-                        <div className="text-right flex flex-col items-end">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1">Combat Score</p>
-                            <p className="text-5xl font-black font-mono text-white tracking-tighter">{(uiState.score || 0).toLocaleString()}</p>
+                        <div className="text-right flex flex-col items-end w-full sm:w-auto">
+                            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-0.5 sm:mb-1">Combat Score</p>
+                            <p className="text-3xl sm:text-5xl font-black font-mono text-white tracking-tighter">{(uiState.score || 0).toLocaleString()}</p>
                             
                             {uiState.mission && (
-                                <div className="mt-6 bg-black/60 backdrop-blur-md border border-emerald-500/30 p-4 rounded-2xl w-64 text-left">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Target className="w-4 h-4 text-emerald-500" />
-                                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Active Mission</span>
+                                <div className="mt-2 sm:mt-6 bg-black/60 backdrop-blur-md border border-emerald-500/30 p-2 sm:p-4 rounded-xl sm:rounded-2xl w-full sm:w-64 text-left">
+                                    <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                                        <Target className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-500" />
+                                        <span className="text-[9px] sm:text-xs font-bold uppercase tracking-widest text-emerald-500">Active Mission</span>
                                     </div>
-                                    <h3 className="font-bold text-white mb-1">{uiState.mission.title}</h3>
-                                    <p className="text-[10px] text-neutral-400 mb-3">{uiState.mission.rewardDesc}</p>
-                                    <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                    <h3 className="font-bold text-white mb-0.5 sm:mb-1 text-xs sm:text-base">{uiState.mission.title}</h3>
+                                    <p className="text-[8px] sm:text-[10px] text-neutral-400 mb-1 sm:mb-3">{uiState.mission.rewardDesc}</p>
+                                    <div className="h-1.5 sm:h-2 bg-neutral-800 rounded-full overflow-hidden">
                                         <div 
                                             className="h-full bg-emerald-500 transition-all duration-300" 
                                             style={{ width: `${Math.min(100, Math.max(0, uiState.mission.progress))}%` }}

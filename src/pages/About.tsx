@@ -34,6 +34,16 @@ export default function About() {
                     </section>
                     
                     <section>
+                        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">📖 Hızlı Başlangıç Rehberi (Gameplay Tips)</h2>
+                        <ul className="list-disc pl-6 space-y-2 text-neutral-400">
+                            <li><strong className="text-neutral-200">Hareket Etmek Hayattır:</strong> Düşman ateşinden kaçınmak için sürekli hareket halinde olun. Sniper tipi düşmanlar durduğunuz an sizi kolayca vurabilir.</li>
+                            <li><strong className="text-neutral-200">Hava Saldırısını Tasarruflu Kullanın:</strong> 'F' tuşu ile atılan hava saldırısı (Airstrike) büyük alan hasarı verir. Küçük gruplar yerine toplu düşman gruplarını yok etmek için saklayın.</li>
+                            <li><strong className="text-neutral-200">Zırh Açısı (Angling):</strong> Tankınızın ön zırhı her zaman daha güçlüdür! Düşmanlara doğrudan bakmak yerine tankınızı çapraz (açılı) tutarak mermilerin sekme şansını artırın.</li>
+                            <li><strong className="text-neutral-200">Görevleri İhmal Etmeyin:</strong> Haritadaki görev bölgelerini (Bölge Ele Geçirme, Üs İmha Etme) tamamlayarak hem puanınızı katlayın hem de sağlık/airstrike gibi kritik ödüller kazanın.</li>
+                        </ul>
+                    </section>
+                    
+                    <section>
                         <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">🛡️ Vizyonumuz</h2>
                         <p className="text-neutral-400 leading-relaxed">
                             Tank Fight, web tarayıcılarının sınırlarını zorlayarak oyunculara kurulum gerektirmeyen, yüksek performanslı ve eğlenceli bir oyun deneyimi sunmayı amaçlar. Sürekli güncellenen yapısı ve topluluk odaklı skor tablosuyla, klasik tank oyunlarını modern teknolojilerle buluşturuyoruz.
