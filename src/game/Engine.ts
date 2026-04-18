@@ -1894,11 +1894,38 @@ export class GameEngine {
             this.ctx.fillRect(i, tank.radius*0.6, 2, tank.radius*0.4);
         }
 
+        // Determine colors based on skin
+        let skin = tank.customization?.skin || 'default';
+        let primaryColor = tank.customization?.paintJob || tank.color;
+        let secondaryColor = '#000000';
+        let isNeon = false;
+
+        if (skin === 'gold') {
+            primaryColor = '#fbbf24';
+            secondaryColor = '#92400e';
+        } else if (skin === 'neon') {
+            primaryColor = '#00ffff';
+            secondaryColor = '#ff00ff';
+            isNeon = true;
+        } else if (skin === 'lava') {
+            primaryColor = '#ef4444';
+            secondaryColor = '#7f1d1d';
+        } else if (skin === 'plasma') {
+            primaryColor = '#a855f7';
+            secondaryColor = '#1d4ed8';
+            isNeon = true;
+        }
+
         // Main body with gradient
         const hullGradient = this.ctx.createLinearGradient(-tank.radius, -tank.radius, tank.radius, tank.radius);
-        hullGradient.addColorStop(0, tank.customization?.paintJob || tank.color);
-        hullGradient.addColorStop(1, '#000000'); // darker shade
+        hullGradient.addColorStop(0, primaryColor);
+        hullGradient.addColorStop(1, secondaryColor); // darker shade
         
+        if (isNeon) {
+            this.ctx.shadowColor = primaryColor;
+            this.ctx.shadowBlur = 15;
+        }
+
         this.ctx.fillStyle = hullGradient;
         this.ctx.beginPath();
         this.ctx.roundRect(-tank.radius, -tank.radius*0.8, tank.radius*2, tank.radius*1.6, 4);
@@ -1927,37 +1954,53 @@ export class GameEngine {
             }
         }
 
-        // Apply decal if present
-        if (tank.customization && tank.customization.decal !== 'none') {
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            this.ctx.font = 'bold 12px sans-serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(tank.customization.decal, 0, 5);
+        // Apply visual mod if present on hull
+        if (tank.customization && tank.customization.visualMod !== 'none') {
+            if (tank.customization.visualMod === 'armor') {
+                this.ctx.fillStyle = '#3f3f46'; // dark zinc
+                this.ctx.fillRect(-tank.radius*0.8, -tank.radius*0.9, tank.radius*1.6, tank.radius*0.2);
+                this.ctx.fillRect(-tank.radius*0.8, tank.radius*0.7, tank.radius*1.6, tank.radius*0.2);
+            }
         }
 
-        // Apply visual mod if present
-        if (tank.customization && tank.customization.visualMod !== 'none') {
-            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, tank.radius * 0.3, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
         
-        // Add camo blobs
+        // Add camo or specific skin patterns
         this.ctx.save();
         this.ctx.clip(); // Clip to the rounded rect of the hull
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        let seed = tank.id * 12345;
-        for (let i = 0; i < 6; i++) {
-            seed = (seed * 9301 + 49297) % 233280;
-            let bx = (seed / 233280) * tank.radius * 2 - tank.radius;
-            seed = (seed * 9301 + 49297) % 233280;
-            let by = (seed / 233280) * tank.radius * 2 - tank.radius;
-            seed = (seed * 9301 + 49297) % 233280;
-            let br = (seed / 233280) * tank.radius * 0.6 + 2;
-            this.ctx.beginPath();
-            this.ctx.arc(bx, by, br, 0, Math.PI * 2);
-            this.ctx.fill();
+        
+        if (skin === 'neon') {
+            this.ctx.strokeStyle = '#00ffff';
+            this.ctx.lineWidth = 2;
+            for(let i=0; i < 3; i++) {
+                this.ctx.strokeRect(-tank.radius + 5 + i*4, -tank.radius*0.8 + 5 + i*4, tank.radius*2 - 10 - i*8, tank.radius*1.6 - 10 - i*8);
+            }
+        } else if (skin === 'lava') {
+            this.ctx.fillStyle = 'rgba(255, 100, 0, 0.6)';
+            let seed = tank.id * 54321 + performance.now() / 200;
+            for (let i = 0; i < 5; i++) {
+                seed = (seed * 9301 + 49297) % 233280;
+                let bx = (seed / 233280) * tank.radius * 2 - tank.radius;
+                seed = (seed * 9301 + 49297) % 233280;
+                let by = (seed / 233280) * tank.radius * 2 - tank.radius;
+                this.ctx.beginPath();
+                this.ctx.arc(bx, by, tank.radius * 0.3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        } else {
+            // Default camo blobs
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            let seed = tank.id * 12345;
+            for (let i = 0; i < 6; i++) {
+                seed = (seed * 9301 + 49297) % 233280;
+                let bx = (seed / 233280) * tank.radius * 2 - tank.radius;
+                seed = (seed * 9301 + 49297) % 233280;
+                let by = (seed / 233280) * tank.radius * 2 - tank.radius;
+                seed = (seed * 9301 + 49297) % 233280;
+                let br = (seed / 233280) * tank.radius * 0.6 + 2;
+                this.ctx.beginPath();
+                this.ctx.arc(bx, by, br, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
         }
         this.ctx.restore();
 
@@ -1991,8 +2034,8 @@ export class GameEngine {
         
         // Turret body
         const turretGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, tank.radius * 0.6);
-        turretGradient.addColorStop(0, tank.color);
-        turretGradient.addColorStop(1, '#000000');
+        turretGradient.addColorStop(0, primaryColor);
+        turretGradient.addColorStop(1, secondaryColor);
         this.ctx.fillStyle = turretGradient;
         this.ctx.beginPath();
         this.ctx.arc(0, 0, tank.radius * 0.6, 0, Math.PI * 2);
@@ -2008,20 +2051,69 @@ export class GameEngine {
         // Turret camo
         this.ctx.save();
         this.ctx.clip();
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        let tSeed = tank.id * 54321;
-        for (let i = 0; i < 4; i++) {
-            tSeed = (tSeed * 9301 + 49297) % 233280;
-            let bx = (tSeed / 233280) * tank.radius - tank.radius/2;
-            tSeed = (tSeed * 9301 + 49297) % 233280;
-            let by = (tSeed / 233280) * tank.radius - tank.radius/2;
-            tSeed = (tSeed * 9301 + 49297) % 233280;
-            let br = (tSeed / 233280) * tank.radius * 0.4 + 2;
+        
+        if (skin === 'lava') {
+            this.ctx.fillStyle = 'rgba(255, 100, 0, 0.8)';
             this.ctx.beginPath();
-            this.ctx.arc(bx, by, br, 0, Math.PI * 2);
+            this.ctx.arc(0, 0, tank.radius * 0.2, 0, Math.PI * 2);
             this.ctx.fill();
+        } else {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            let tSeed = tank.id * 54321;
+            for (let i = 0; i < 4; i++) {
+                tSeed = (tSeed * 9301 + 49297) % 233280;
+                let bx = (tSeed / 233280) * tank.radius - tank.radius/2;
+                tSeed = (tSeed * 9301 + 49297) % 233280;
+                let by = (tSeed / 233280) * tank.radius - tank.radius/2;
+                tSeed = (tSeed * 9301 + 49297) % 233280;
+                let br = (tSeed / 233280) * tank.radius * 0.4 + 2;
+                this.ctx.beginPath();
+                this.ctx.arc(bx, by, br, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
         }
         this.ctx.restore();
+
+        // Apply decal ON the turret
+        if (tank.customization && tank.customization.decal !== 'none') {
+            this.ctx.save();
+            // rotate so decal faces the turret barrel forward
+            this.ctx.rotate(Math.PI / 2);
+            let fontSize = tank.radius * 0.7;
+            this.ctx.font = `900 ${fontSize}px "Inter", sans-serif`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            // Decal shadow/stroke for visibility
+            this.ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeText(tank.customization.decal, 0, 0);
+            
+            // Decal fill
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            if(skin === 'gold') this.ctx.fillStyle = '#fffbeb';
+            if(skin === 'neon' || skin === 'plasma') {
+                 this.ctx.fillStyle = primaryColor;
+                 this.ctx.shadowColor = primaryColor;
+                 this.ctx.shadowBlur = 10;
+            }
+            this.ctx.fillText(tank.customization.decal, 0, 0);
+            this.ctx.restore();
+        }
+
+        // Apply visual mod on turret
+        if (tank.customization && tank.customization.visualMod === 'antenna') {
+            this.ctx.strokeStyle = '#a1a1aa'; // zinc 400
+            this.ctx.lineWidth = 1.5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -tank.radius * 0.4);
+            this.ctx.lineTo(0, -tank.radius * 1.2);
+            this.ctx.stroke();
+            this.ctx.fillStyle = '#ef4444'; // red tip
+            this.ctx.beginPath();
+            this.ctx.arc(0, -tank.radius * 1.2, 2, 0, Math.PI*2);
+            this.ctx.fill();
+        }
 
         this.ctx.strokeStyle = '#171717';
         this.ctx.lineWidth = 2;

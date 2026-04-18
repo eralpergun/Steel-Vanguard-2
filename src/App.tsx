@@ -300,6 +300,28 @@ function AppInner() {
         setTimeout(() => setChestMessage(null), 5000);
     };
 
+    const skinShopItems = [
+        { id: 'gold', name: 'Solid Gold', price: 5000 },
+        { id: 'neon', name: 'Cyber Neon', price: 10000 },
+        { id: 'lava', name: 'Molten Lava', price: 25000 },
+        { id: 'plasma', name: 'Plasma Energy', price: 50000 },
+    ];
+
+    const buySkin = (skinId: string, price: number, skinName: string) => {
+        if (unlockedSkins.includes(skinId)) return;
+        
+        if (totalCoins < price) {
+            setChestMessage(`Not enough points! You need ${price.toLocaleString()}.`);
+            setTimeout(() => setChestMessage(null), 3000);
+            return;
+        }
+
+        setTotalCoins(prev => prev - price);
+        setUnlockedSkins(prev => [...prev, skinId]);
+        setChestMessage(`🎉 You unlocked the ${skinName} skin! 🎉`);
+        setTimeout(() => setChestMessage(null), 5000);
+    };
+
     useEffect(() => {
         if (gameState === 'playing' && canvasRef.current) {
             const handleResize = () => {
@@ -380,7 +402,7 @@ function AppInner() {
     return (
         <div className="min-h-screen bg-neutral-950 text-white overflow-hidden font-sans selection:bg-emerald-500/30">
             {gameState === 'login' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-black">
+                <div className="absolute inset-0 flex items-center justify-center mesh-bg">
                     <div className="w-full max-w-md p-8 bg-neutral-900/50 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl">
                         <div className="text-center mb-8">
                             <div className="inline-flex p-2 bg-emerald-500/10 rounded-3xl mb-4 overflow-hidden border border-emerald-500/20 shadow-2xl shadow-emerald-900/20">
@@ -460,7 +482,7 @@ function AppInner() {
             )}
 
             {gameState === 'menu' && (
-                <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-black p-8">
+                <div className="h-screen overflow-y-auto mesh-bg p-8">
                     <div className="max-w-6xl mx-auto">
                         <div className="flex justify-between items-end mb-12 border-b border-white/5 pb-8">
                             <div className="flex items-center gap-6">
@@ -535,7 +557,8 @@ function AppInner() {
                                     </div>
                                     {/* Customization and Special Operations hidden for guests */}
                                     {!isGuest && (
-                                        <div className="mt-8 bg-gradient-to-br from-neutral-900 to-black rounded-3xl border border-white/10 p-8 shadow-2xl">
+                                    <div className="mt-8 glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-32 bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none"></div>
                                             <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
                                                 <div className="w-2 h-6 bg-emerald-500 rounded-full"></div>
                                                 Customize Tank
@@ -544,9 +567,13 @@ function AppInner() {
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Skin</label>
                                                     <select value={customization.skin} onChange={(e) => setCustomization(prev => ({ ...prev, skin: e.target.value }))} className="w-full bg-neutral-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                                                        {unlockedSkins.map(skin => (
-                                                            <option key={skin} value={skin}>{skin.charAt(0).toUpperCase() + skin.slice(1)}</option>
-                                                        ))}
+                                                        {unlockedSkins.map(skin => {
+                                                            const shopItem = skinShopItems.find(s => s.id === skin);
+                                                            const displayName = shopItem ? shopItem.name : (skin.charAt(0).toUpperCase() + skin.slice(1));
+                                                            return (
+                                                                <option key={skin} value={skin}>{displayName}</option>
+                                                            );
+                                                        })}
                                                     </select>
                                                 </div>
                                                 <div className="space-y-2">
@@ -606,7 +633,7 @@ function AppInner() {
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 glass-panel rounded-3xl">
                                                 {brainrotStats.map(t => (
                                                     <button
                                                         key={t.id}
@@ -643,7 +670,7 @@ function AppInner() {
                                                 <ShieldAlert className="w-5 h-5 text-red-500" />
                                                 Classified Prototypes
                                             </h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-neutral-900/30 rounded-3xl border border-white/5">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 glass-panel rounded-3xl">
                                                 {opStats.map(t => (
                                                     <button
                                                         key={t.id}
@@ -672,6 +699,42 @@ function AppInner() {
                                                         </ul>
                                                     </button>
                                                 ))}
+                                            </div>
+                                        </section>
+                                        <section>
+                                            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
+                                                <Target className="w-5 h-5 text-indigo-500" />
+                                                Skin Shop
+                                            </h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 glass-panel rounded-3xl">
+                                                {skinShopItems.map(skin => {
+                                                    const isUnlocked = unlockedSkins.includes(skin.id);
+                                                    return (
+                                                        <button
+                                                            key={skin.id}
+                                                            disabled={isUnlocked}
+                                                            onClick={() => buySkin(skin.id, skin.price, skin.name)}
+                                                            className={`p-4 rounded-xl border transition-all text-center relative group ${
+                                                                isUnlocked
+                                                                ? 'bg-neutral-900 border-white/10 opacity-50 cursor-not-allowed'
+                                                                : 'bg-indigo-950/30 border-indigo-500/30 hover:border-indigo-500 hover:bg-indigo-900/50 hover:scale-[1.02]'
+                                                            }`}
+                                                        >
+                                                            <div className="mb-2">
+                                                                <span className="text-sm font-bold uppercase tracking-widest text-indigo-400">{skin.name}</span>
+                                                            </div>
+                                                            {!isUnlocked ? (
+                                                                <div className="text-yellow-500 font-mono font-bold">
+                                                                    {skin.price.toLocaleString()}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-emerald-500 font-bold text-xs uppercase tracking-widest mt-1">
+                                                                    Unlocked
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </section>
                                     </>
