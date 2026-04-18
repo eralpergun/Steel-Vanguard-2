@@ -132,7 +132,7 @@ export class GameEngine {
     private missionSpawnTimer: number = 5; // First mission after 5 seconds
 
     public isPaused: boolean = false;
-    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank';
+    private playerTankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank' | 'bulldog' | 'phantom' | 'titan' | 'wasp' | 'paladin' | 'vortex';
     private customization: Customization;
 
     public isMobile: boolean = false;
@@ -186,7 +186,7 @@ export class GameEngine {
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
 
-    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customization: Customization, customEnemyCount?: number) {
+    constructor(canvas: HTMLCanvasElement, tankType: 'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank' | 'bulldog' | 'phantom' | 'titan' | 'wasp' | 'paladin' | 'vortex', difficulty: 'easy' | 'normal' | 'hard' | 'custom', onUpdateUI: (state: any) => void, customization: Customization, customEnemyCount?: number) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.playerTankType = tankType;
@@ -268,6 +268,18 @@ export class GameEngine {
         } else if (this.playerTankType === 'op_tank') {
             // Top Secret OP Tank - Insane everything
             radius = 24; health = 2000; speed = 600; turn = 7.0; turretTurn = 12.0; reload = 0.05; damage = 100; maxAmmo = 1000;
+        } else if (this.playerTankType === 'bulldog') {
+            radius = 21; health = 250; speed = 250; turn = 3.5; turretTurn = 5.0; reload = 0.9; damage = 60; maxAmmo = 60;
+        } else if (this.playerTankType === 'phantom') {
+            radius = 17; health = 100; speed = 400; turn = 6.0; turretTurn = 8.0; reload = 1.5; damage = 80; maxAmmo = 45;
+        } else if (this.playerTankType === 'titan') {
+            radius = 32; health = 1000; speed = 100; turn = 1.5; turretTurn = 2.5; reload = 3.0; damage = 200; maxAmmo = 25;
+        } else if (this.playerTankType === 'wasp') {
+            radius = 15; health = 80; speed = 450; turn = 6.5; turretTurn = 10.0; reload = 0.2; damage = 15; maxAmmo = 150;
+        } else if (this.playerTankType === 'paladin') {
+            radius = 25; health = 400; speed = 180; turn = 2.5; turretTurn = 4.0; reload = 0.8; damage = 40; maxAmmo = 80;
+        } else if (this.playerTankType === 'vortex') {
+            radius = 22; health = 300; speed = 280; turn = 4.0; turretTurn = 5.5; reload = 1.2; damage = 75; maxAmmo = 65;
         }
 
         this.player = {

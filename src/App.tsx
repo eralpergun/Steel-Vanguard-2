@@ -47,7 +47,7 @@ function AppInner() {
     const [isGuest, setIsGuest] = useState(true);
     const [isLoggedIn, setIsLoggedIn] = useState(true);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
+    const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank' | 'bulldog' | 'phantom' | 'titan' | 'wasp' | 'paladin' | 'vortex'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
     const [customEnemyCount, setCustomEnemyCount] = useState<number | ''>('');
     const [uiState, setUiState] = useState<{ health: number, maxHealth: number, reloadProgress: number, score: number, isPaused: boolean, ammo: number, maxAmmo: number, airstrikeCooldown: number, isRegenerating: boolean, mission?: any }>({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false });
@@ -229,11 +229,11 @@ function AppInner() {
             return;
         }
         
-        const brainrotTanks = ['67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili'];
+        const brainrotTanks = ['67', 'brr', 'tralalero', 'tung', 'cappucino', 'lirili', 'bulldog', 'phantom', 'titan', 'wasp', 'paladin', 'vortex'];
         const lockedTanks = brainrotTanks.filter(t => !unlockedTanks.includes(t));
         
         if (lockedTanks.length === 0) {
-            setChestMessage("You already unlocked all brainrot tanks!");
+            setChestMessage("You already unlocked all tanks from the chest!");
             setTimeout(() => setChestMessage(null), 3000);
             return;
         }
@@ -248,7 +248,13 @@ function AppInner() {
             'tralalero': 'Tralalero Tralala',
             'tung': 'Tung Tung Sahur',
             'cappucino': 'Cappucino Assasino',
-            'lirili': 'Lirili Larila'
+            'lirili': 'Lirili Larila',
+            'bulldog': 'The Bulldog',
+            'phantom': 'Phantom',
+            'titan': 'Titan',
+            'wasp': 'Wasp',
+            'paladin': 'Paladin',
+            'vortex': 'Vortex'
         };
         setChestMessage(`🎉 You unlocked: ${names[randomTank]}! 🎉`);
         setTimeout(() => setChestMessage(null), 5000);
@@ -341,12 +347,18 @@ function AppInner() {
     ];
 
     const brainrotStats = [
+        { id: 'bulldog', name: 'The Bulldog', desc: 'Fierce Medium', hp: 250, speed: 250, armor: 'Medium', dmg: 60 },
         { id: '67', name: '67 Tank', desc: 'Zonguldak Power', hp: 270, speed: 315, armor: 'High', dmg: 108 },
         { id: 'brr', name: 'Brr Brr Patapim', desc: 'Blast Wave', hp: 225, speed: 360, armor: 'Medium', dmg: 22 },
         { id: 'tralalero', name: 'Tralalero', desc: 'Tralala', hp: 720, speed: 162, armor: 'Extreme', dmg: 180 },
         { id: 'tung', name: 'Tung Tung', desc: 'Sahur Special', hp: 135, speed: 380, armor: 'Low', dmg: 65 },
         { id: 'cappucino', name: 'Cappucino Assasino', desc: 'Assassin', hp: 225, speed: 250, armor: 'Medium', dmg: 150 },
         { id: 'lirili', name: 'Lirili', desc: 'Larila', hp: 160, speed: 300, armor: 'Medium', dmg: 55 },
+        { id: 'phantom', name: 'Phantom', desc: 'Stealth Assasin', hp: 100, speed: 400, armor: 'Glass', dmg: 80 },
+        { id: 'titan', name: 'Titan', desc: 'Super Heavy', hp: 1000, speed: 100, armor: 'Massive', dmg: 200 },
+        { id: 'wasp', name: 'Wasp', desc: 'Annoying Mosquito', hp: 80, speed: 450, armor: 'None', dmg: 15 },
+        { id: 'paladin', name: 'Paladin', desc: 'Defender', hp: 400, speed: 180, armor: 'High', dmg: 40 },
+        { id: 'vortex', name: 'Vortex', desc: 'All Rounder', hp: 300, speed: 280, armor: 'Medium', dmg: 75 },
     ];
 
     const opStats = [
