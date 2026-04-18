@@ -41,11 +41,11 @@ function AppInner() {
         else if (location.pathname === '/' && gameState !== 'menu') setGameState('menu');
         else if (location.pathname === '/war' && gameState !== 'playing') setGameState('playing');
     }, [location.pathname]);
-    const [username, setUsername] = useState('Anonymous');
+    const [username, setUsername] = useState('Guest');
     const [password, setPassword] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
-    const [isGuest, setIsGuest] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isGuest, setIsGuest] = useState(true);
+    const [isLoggedIn, setIsLoggedIn] = useState(true);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
@@ -100,24 +100,13 @@ function AppInner() {
             let finalUsername = username.trim();
 
             if (mode === 'guest') {
-                finalUsername = `Guest_${Math.floor(Math.random() * 10000)}`;
-                setUsername(finalUsername);
+                setUsername('Guest');
                 setIsGuest(true);
                 setIsLoggedIn(true);
-
-                // Initialize new guest user
-                await set(ref(db, `players/${finalUsername}`), {
-                    username: finalUsername,
-                    totalCoins: 0,
-                    unlockedTanks: ['light', 'medium', 'heavy'],
-                    unlockedSkins: ['default'],
-                    customization: { paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' }
-                });
                 setTotalCoins(0);
                 setUnlockedTanks(['light', 'medium', 'heavy']);
                 setUnlockedSkins(['default']);
                 setCustomization({ paintJob: '#10b981', decal: 'none', visualMod: 'none', skin: 'default' });
-
             } else {
                 if (!finalUsername) { alert("Please enter a username"); setIsLoggingIn(false); return; }
                 if (!password) { alert("Please enter a password"); setIsLoggingIn(false); return; }
@@ -179,36 +168,35 @@ function AppInner() {
     };
 
     useEffect(() => {
-        if (gameState !== 'login' && isLoggedIn && username) {
+        if (gameState !== 'login' && isLoggedIn && username && !isGuest) {
             const saveData = async () => {
                 try {
                     await set(ref(db, `players/${username}`), {
                         username,
-                        password: isGuest ? null : password,
+                        password: password,
                         totalCoins,
                         unlockedTanks,
                         unlockedSkins,
                         customization
                     });
                     
-                    if (!isGuest && !username.startsWith('Guest_')) {
-                        await set(ref(db, `leaderboard/${username}`), {
-                            username,
-                            score: totalCoins
-                        });
-                    }
+                    await set(ref(db, `leaderboard/${username}`), {
+                        username,
+                        score: totalCoins
+                    });
                 } catch (error) {
                     console.error("Error saving data:", error);
                 }
             };
             saveData();
         }
-    }, [totalCoins, unlockedTanks, username, gameState]);
+    }, [totalCoins, unlockedTanks, username, gameState, isGuest]);
 
     const handleSignOut = async () => {
         try {
             setIsLoggedIn(false);
-            setUsername('Anonymous');
+            setIsGuest(false);
+            setUsername('');
             setPassword('');
             setGameState('login');
         } catch (error) {
@@ -225,7 +213,7 @@ function AppInner() {
                 await remove(ref(db, `leaderboard/${username}`));
             }
             setIsLoggedIn(false);
-            setUsername('Anonymous');
+            setUsername('');
             setPassword('');
             setGameState('login');
         } catch (error: any) {
@@ -472,7 +460,7 @@ function AppInner() {
                                 />
                                 <div>
                                     <h1 className="text-5xl font-black uppercase tracking-tighter mb-2">Command Center</h1>
-                                    <p className="text-neutral-500 uppercase tracking-widest text-sm">Welcome back, <span className="text-emerald-500">{username}</span></p>
+                                    <p className="text-neutral-500 uppercase tracking-widest text-sm">Welcome back, <span className="text-emerald-500">{isGuest ? 'Guest' : username}</span></p>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -483,7 +471,7 @@ function AppInner() {
                                         onClick={handleSignOut}
                                         className="text-xs font-bold uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors"
                                     >
-                                        Log Out
+                                        {isGuest ? 'Create Account / Log In' : 'Log Out'}
                                     </button>
                                     {!isGuest && (
                                         <button
