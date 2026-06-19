@@ -4,10 +4,11 @@ import { GameEngine } from './game/Engine';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
 
-import { Crosshair, ShieldAlert, Target } from 'lucide-react';
+import { Crosshair, ShieldAlert, Target, Skull, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { db } from './firebase';
 import { ref, get, set, child, onValue, query, orderByChild, limitToLast, remove } from 'firebase/database';
-import { Joystick } from 'react-joystick-component';
+import { VirtualJoystick } from './components/VirtualJoystick';
 
 export default function App() {
     return (
@@ -50,7 +51,7 @@ function AppInner() {
     const [selectedTank, setSelectedTank] = useState<'light' | 'medium' | 'heavy' | '67' | 'brr' | 'tralalero' | 'tung' | 'cappucino' | 'lirili' | 'secret' | 'shitty' | 'op_tank' | 'bulldog' | 'phantom' | 'titan' | 'wasp' | 'paladin' | 'vortex'>('medium');
     const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
     const [customEnemyCount, setCustomEnemyCount] = useState<number | ''>('');
-    const [uiState, setUiState] = useState<{ health: number, maxHealth: number, reloadProgress: number, score: number, isPaused: boolean, ammo: number, maxAmmo: number, airstrikeCooldown: number, isRegenerating: boolean, mission?: any }>({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false });
+    const [uiState, setUiState] = useState<{ health: number, maxHealth: number, reloadProgress: number, score: number, isPaused: boolean, ammo: number, maxAmmo: number, airstrikeCooldown: number, isRegenerating: boolean, mission?: any, killFeed?: Array<{ id: number, type: string, timestamp: number }> }>({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false, killFeed: [] });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
 
@@ -956,10 +957,10 @@ function AppInner() {
 
             {gameState === 'playing' && (
                 <div 
-                    className="relative w-full h-screen bg-black cursor-none"
+                    className="relative w-full h-screen bg-black cursor-none select-none touch-none overscroll-none"
                     onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                 >
-                    <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight} className="block" />
+                    <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight} className="block w-full h-full" />
                     
                     {/* HUD */}
                     <div className="absolute inset-4 sm:inset-8 flex flex-col sm:flex-row justify-between items-start pointer-events-none gap-4 sm:gap-0">
@@ -1026,6 +1027,18 @@ function AppInner() {
                             <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-0.5 sm:mb-1">Combat Score</p>
                             <p className="text-3xl sm:text-5xl font-black font-mono text-white tracking-tighter">{(uiState.score || 0).toLocaleString()}</p>
                             
+                            <button
+                                onClick={() => {
+                                    if (confirm('Are you sure you want to stop the battle and return to base?')) {
+                                        setGameState('menu');
+                                    }
+                                }}
+                                className="pointer-events-auto mt-2 flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-950/45 text-red-400 hover:bg-neutral-900 hover:text-white hover:border-white/20 transition-all text-[9px] font-black uppercase tracking-widest leading-none shadow-lg"
+                            >
+                                <LogOut className="w-3.5 h-3.5 text-red-500" />
+                                Abort Mission
+                            </button>
+                            
                             {uiState.mission && (
                                 <div className="mt-2 sm:mt-6 bg-black/60 backdrop-blur-md border border-emerald-500/30 p-2 sm:p-4 rounded-xl sm:rounded-2xl w-full sm:w-64 text-left">
                                     <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
@@ -1042,6 +1055,35 @@ function AppInner() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Kill Feed */}
+                            <div className="mt-4 w-full sm:w-64 flex flex-col gap-2 pointer-events-none">
+                                <AnimatePresence>
+                                    {uiState.killFeed && uiState.killFeed.map((kill) => {
+                                        const typeName = kill.type.toUpperCase();
+                                        const badgeColor = kill.type === 'scout' ? 'border-blue-500/30 bg-blue-950/50 text-blue-400 shadow-lg shadow-blue-950/20' :
+                                                           kill.type === 'sniper' ? 'border-amber-500/30 bg-amber-950/50 text-amber-400 shadow-lg shadow-amber-950/20' :
+                                                           'border-red-500/30 bg-red-950/50 text-red-500 shadow-lg shadow-red-900/20';
+                                        return (
+                                            <motion.div
+                                                key={kill.id}
+                                                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                exit={{ opacity: 0, x: 100, scale: 0.95 }}
+                                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl border backdrop-blur-md text-left ${badgeColor}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-black tracking-wider text-white">YOU</span>
+                                                    <Skull className="w-3.5 h-3.5 text-red-500" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">{typeName}</span>
+                                                </div>
+                                                <span className="text-[8px] font-black tracking-widest text-neutral-400">DESTROYED</span>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
 
@@ -1057,36 +1099,43 @@ function AppInner() {
 
                     {/* Mobile Controls */}
                     {isMobile && (
-                        <div className="absolute inset-0 pointer-events-none z-40">
-                            <div className="absolute bottom-12 left-12 pointer-events-auto opacity-70">
-                                <Joystick 
+                        <div className="absolute inset-0 pointer-events-none z-40 select-none">
+                            {/* Left Joystick - Drive Container */}
+                            <div className="absolute bottom-6 left-6 pointer-events-auto opacity-80 active:opacity-100 transition-opacity">
+                                <VirtualJoystick 
                                     size={120} 
-                                    sticky={false} 
-                                    baseColor="rgba(255,255,255,0.1)" 
-                                    stickColor="rgba(255,255,255,0.5)" 
-                                    move={(e) => {
-                                        if (engineRef.current && typeof e.x === 'number' && typeof e.y === 'number') {
-                                            engineRef.current.setMobileMove(e.x / 60, -e.y / 60);
+                                    label="DRIVE"
+                                    subLabel="MOVE HULL"
+                                    baseColor="rgba(255,255,255,0.06)" 
+                                    stickColor="rgba(255,255,255,0.4)" 
+                                    onMove={(x, y) => {
+                                        if (engineRef.current) {
+                                            engineRef.current.setMobileMove(x, y);
                                         }
                                     }} 
-                                    stop={() => {
-                                        if (engineRef.current) engineRef.current.setMobileMove(0, 0);
+                                    onStop={() => {
+                                        if (engineRef.current) {
+                                            engineRef.current.setMobileMove(0, 0);
+                                        }
                                     }}
                                 />
                             </div>
-                            <div className="absolute bottom-12 right-12 pointer-events-auto opacity-70">
-                                <Joystick 
+
+                            {/* Right Joystick - Fire / Aim Container */}
+                            <div className="absolute bottom-6 right-6 pointer-events-auto opacity-85 active:opacity-100 transition-opacity">
+                                <VirtualJoystick 
                                     size={120} 
-                                    sticky={false} 
-                                    baseColor="rgba(239,68,68,0.1)" 
-                                    stickColor="rgba(239,68,68,0.5)" 
-                                    move={(e) => {
-                                        if (engineRef.current && typeof e.x === 'number' && typeof e.y === 'number') {
-                                            engineRef.current.setMobileAim(e.x / 60, -e.y / 60);
+                                    label="FIRE"
+                                    subLabel="AIM TURRET"
+                                    baseColor="rgba(239,68,68,0.05)" 
+                                    stickColor="rgba(239,68,68,0.45)" 
+                                    onMove={(x, y) => {
+                                        if (engineRef.current) {
+                                            engineRef.current.setMobileAim(x, y);
                                             engineRef.current.setMobileFire(true);
                                         }
                                     }} 
-                                    stop={() => {
+                                    onStop={() => {
                                         if (engineRef.current) {
                                             engineRef.current.setMobileAim(0, 0);
                                             engineRef.current.setMobileFire(false);
@@ -1094,9 +1143,11 @@ function AppInner() {
                                     }}
                                 />
                             </div>
-                            <div className="absolute top-1/2 right-12 -translate-y-1/2 pointer-events-auto flex flex-col gap-4">
+
+                            {/* Accessory Action Buttons */}
+                            <div className="absolute top-[35%] right-4 -translate-y-1/2 pointer-events-auto flex flex-col gap-3">
                                 <button 
-                                    className={`w-16 h-16 rounded-full font-bold text-xs border-2 bg-blue-500/50 border-blue-500 text-white select-none`}
+                                    className="w-14 h-14 rounded-full font-black text-[10px] tracking-wider border border-blue-500/30 bg-blue-950/60 text-blue-400 active:scale-95 transition-all shadow-lg select-none outline-none focus:outline-none"
                                     style={{ touchAction: 'none' }}
                                     onPointerDown={(e) => {
                                         e.preventDefault();
@@ -1114,14 +1165,14 @@ function AppInner() {
                                     MG
                                 </button>
                                 <button 
-                                    className={`w-16 h-16 rounded-full font-bold text-xs border-2 ${uiState.airstrikeCooldown <= 0 ? 'bg-emerald-500/50 border-emerald-500 text-white' : 'bg-neutral-800/50 border-neutral-600 text-neutral-400'}`}
+                                    className={`w-14 h-14 rounded-full font-black text-[9px] tracking-widest border transition-all active:scale-95 shadow-lg select-none outline-none focus:outline-none whitespace-nowrap ${uiState.airstrikeCooldown <= 0 ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-400 font-black animate-pulse' : 'bg-neutral-900/60 border-neutral-700/40 text-neutral-500'}`}
                                     onClick={() => {
                                         if (engineRef.current && uiState.airstrikeCooldown <= 0) {
                                             engineRef.current.triggerMobileAirstrike();
                                         }
                                     }}
                                 >
-                                    AIRSTRIKE
+                                    F-AIR
                                 </button>
                             </div>
                         </div>

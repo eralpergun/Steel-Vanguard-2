@@ -201,6 +201,7 @@ export class GameEngine {
     private difficulty: 'easy' | 'normal' | 'hard' | 'custom';
     private customEnemyCount?: number;
     private upgrades: Upgrades;
+    private killFeed: Array<{ id: number; type: string; timestamp: number }> = [];
 
     private textures: Record<string, HTMLImageElement> = {};
     private texturesLoaded: boolean = false;
@@ -247,6 +248,7 @@ export class GameEngine {
 
     private init() {
         this.spawnTimer = 1.0;
+        this.killFeed = [];
         
         // Balanced Medium Tank (Default)
         let radius = 20, health = 180, speed = 225, turn = 3.0, turretTurn = 5.0, reload = 1.1, damage = 45, maxAmmo = 50;
@@ -1078,6 +1080,18 @@ export class GameEngine {
                     color: '#4a0404' // Dark red
                 });
                 this.shakeAmount = 10; // Screen shake on enemy death
+                
+                // Add to kill feed
+                const enemyType = this.enemies[i].type;
+                this.killFeed.unshift({
+                    id: this.nextId++,
+                    type: enemyType,
+                    timestamp: Date.now()
+                });
+                if (this.killFeed.length > 3) {
+                    this.killFeed.pop();
+                }
+
                 this.enemies.splice(i, 1);
                 let points = 100;
                 if (this.difficulty === 'easy') points = 50;
@@ -1340,7 +1354,8 @@ export class GameEngine {
             maxAmmo: this.player.maxAmmo,
             airstrikeCooldown: Math.max(0, this.airstrikeCooldown),
             isRegenerating: performance.now() - this.player.lastDamageTime > 5000 && this.player.health < this.player.maxHealth,
-            mission: this.currentMission
+            mission: this.currentMission,
+            killFeed: [...this.killFeed]
         });
     }
 
