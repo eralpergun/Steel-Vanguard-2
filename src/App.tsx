@@ -4,11 +4,13 @@ import { GameEngine } from './game/Engine';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
 
-import { Crosshair, ShieldAlert, Target, Skull, LogOut } from 'lucide-react';
+import { Crosshair, ShieldAlert, Target, Skull, LogOut, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from './firebase';
 import { ref, get, set, child, onValue, query, orderByChild, limitToLast, remove } from 'firebase/database';
 import { VirtualJoystick } from './components/VirtualJoystick';
+import { soundtrackEngine } from './game/Audio';
+import { SoundtrackVisualizer } from './components/SoundtrackVisualizer';
 
 export default function App() {
     return (
@@ -54,6 +56,15 @@ function AppInner() {
     const [uiState, setUiState] = useState<{ health: number, maxHealth: number, reloadProgress: number, score: number, isPaused: boolean, ammo: number, maxAmmo: number, airstrikeCooldown: number, isRegenerating: boolean, mission?: any, killFeed?: Array<{ id: number, type: string, timestamp: number }> }>({ health: 100, maxHealth: 100, reloadProgress: 1, score: 0, isPaused: false, ammo: 0, maxAmmo: 0, airstrikeCooldown: 0, isRegenerating: false, killFeed: [] });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
+    const [isMuted, setIsMuted] = useState(() => {
+        const saved = localStorage.getItem('game_music_muted');
+        return saved === 'true';
+    });
+
+    useEffect(() => {
+        soundtrackEngine.setMuted(isMuted);
+        localStorage.setItem('game_music_muted', String(isMuted));
+    }, [isMuted]);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -946,10 +957,18 @@ function AppInner() {
                             </div>
                         </div>
                         
-                        <div className="mt-12 pt-8 border-t border-white/5 text-center flex justify-center items-center gap-4">
+                        <div className="mt-12 pt-8 border-t border-white/5 text-center flex flex-wrap justify-center items-center gap-4 sm:gap-6">
                             <Link to="/hakkimizda" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Hakkımızda</Link>
                             <span className="text-neutral-700 text-xs">•</span>
                             <Link to="/gizlilik-politikasi" className="text-neutral-500 hover:text-emerald-500 text-xs uppercase tracking-widest transition-colors">Gizlilik Politikası</Link>
+                            <span className="text-neutral-700 text-xs">•</span>
+                            <button
+                                onClick={() => setIsMuted(!isMuted)}
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-neutral-800 bg-neutral-950/40 text-neutral-400 hover:text-white hover:border-neutral-600 transition-all text-xs font-bold uppercase tracking-widest pointer-events-auto"
+                            >
+                                {isMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-500" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+                                <span>Music: {isMuted ? 'Muted' : 'On'}</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1038,6 +1057,16 @@ function AppInner() {
                                 <LogOut className="w-3.5 h-3.5 text-red-500" />
                                 Abort Mission
                             </button>
+
+                            <button
+                                onClick={() => setIsMuted(!isMuted)}
+                                className="pointer-events-auto mt-2 flex items-center gap-2 px-3 py-1.5 rounded-xl border border-neutral-800 bg-black/50 text-neutral-400 hover:bg-neutral-900 hover:text-white hover:border-white/20 transition-all text-[9px] font-black uppercase tracking-widest leading-none shadow-lg"
+                            >
+                                {isMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-500" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+                                <span>Music: {isMuted ? 'Muted' : 'On'}</span>
+                            </button>
+
+                            <SoundtrackVisualizer isMuted={isMuted} />
                             
                             {uiState.mission && (
                                 <div className="mt-2 sm:mt-6 bg-black/60 backdrop-blur-md border border-emerald-500/30 p-2 sm:p-4 rounded-xl sm:rounded-2xl w-full sm:w-64 text-left">

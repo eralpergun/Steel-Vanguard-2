@@ -1,4 +1,5 @@
 import { Vec2, resolveCircleAABB, resolveCircleCircle, moveTowardsAngle } from './utils';
+import { soundtrackEngine } from './Audio';
 
 export type Customization = {
     paintJob: string;
@@ -474,12 +475,14 @@ export class GameEngine {
         if (this.isRunning) return;
         this.isRunning = true;
         this.lastTime = performance.now();
+        soundtrackEngine.start();
         this.loop(this.lastTime);
     }
 
     public stop() {
         this.isRunning = false;
         cancelAnimationFrame(this.animationFrameId);
+        soundtrackEngine.stop();
         if ((this as any).cleanupInput) (this as any).cleanupInput();
     }
 
@@ -492,13 +495,49 @@ export class GameEngine {
 
         if (!this.isPaused) {
             this.update(dt);
+        } else {
+            soundtrackEngine.setIntensity(0);
+            soundtrackEngine.update(dt);
         }
         this.draw();
 
         this.animationFrameId = requestAnimationFrame(this.loop);
     };
 
+    private updateSoundtrack(dt: number) {
+        if (!this.player) return;
+
+        // 1. Proximity intensity: Count active enemies within 750px of the player
+        let enemiesInRangeCount = 0;
+        for (const enemy of this.enemies) {
+            if (enemy.health <= 0) continue;
+            const dx = enemy.x - this.player.x;
+            const dy = enemy.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 750) {
+                enemiesInRangeCount++;
+            }
+        }
+        const proximityIntensity = Math.min(0.65, enemiesInRangeCount * 0.18);
+
+        // 2. Damage intensity: check if took damage recently (within 7 seconds)
+        const tookDamageRecently = (performance.now() - this.player.lastDamageTime) < 7000;
+        const damageIntensity = tookDamageRecently ? 0.35 : 0;
+
+        // 3. Firing intensity: check if player is shooting (isMouseDown or isRightMouseDown)
+        const playerFiring = this.isMouseDown || this.isRightMouseDown;
+        const firingIntensity = playerFiring ? 0.25 : 0;
+
+        // Calculate total target intensity, capped at 1.00
+        const totalIntensity = Math.min(1.0, proximityIntensity + damageIntensity + firingIntensity);
+
+        // Feed parameters into the soundtrack engine
+        soundtrackEngine.setIntensity(totalIntensity);
+        soundtrackEngine.update(dt);
+    }
+
     private update(dt: number) {
+        this.updateSoundtrack(dt);
         // --- Player Input ---
         let inputY = 0;
         let inputX = 0;
